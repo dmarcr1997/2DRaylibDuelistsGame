@@ -29,13 +29,13 @@ void Log::PrintLog(LogEntry& Entry)
 {
 	std::string color;
 	switch (Entry.Type) {
-		case LOG_INFO:
+		case L_LOG_INFO:
 			color = "\x1B[32m";
 			break;
-		case LOG_WARNING:
+		case L_LOG_WARNING:
 			color = "\x1B[33m";
 			break;
-		case LOG_ERROR:
+		case L_LOG_ERROR:
 			color = "\x1B[91m";
 			break;
 		default:

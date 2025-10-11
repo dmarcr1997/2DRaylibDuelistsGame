@@ -1,5 +1,6 @@
 #include "Character.h"
 #include "Log.h"
+#include "raylib.h"
 
 Character::Character(int health, int attack, int armor, int stamina, std::string name)
 	: MaxHealth(health), AttackPower(attack), Armor(armor), MaxStamina(stamina), Name(name)
@@ -15,12 +16,12 @@ void Character::UpdateHealth(int Amount)
         int blockedAmount = static_cast<int>(Amount * blockPercent);
         Amount -= blockedAmount;
 
-        Log::LogMessage(LOG_INFO, ("Armor helped to block " + std::to_string(blockPercent * 100.0f) + "% of the attack"));
+        DrawText(("Armor helped to block " + std::to_string(blockPercent * 100.0f) + "% of the attack").c_str(), 190, 240, 20, GREEN);
     }
-    Log::LogMessage(LOG_WARNING, (Name + " health changed by: " + std::to_string(Amount)));
+    DrawText((Name + " health changed by: " + std::to_string(Amount)).c_str(), 190, 260, 20, GREEN);
     Health += Amount;
-    Log::LogMessage(LOG_INFO, (Name + " health is now: " + std::to_string(Health < 0 ? 0 : Health)));
-    Log::LogMessage(LOG_WARNING, (Name + " health changed by: " + std::to_string(Amount)));
+    DrawText((Name + " health is now: " + std::to_string(Health < 0 ? 0 : Health)).c_str(), 190, 280, 20, GREEN);
+    DrawText((Name + " health changed by: " + std::to_string(Amount)).c_str(), 190, 300, 20, GREEN);
 }
 
 void Character::UpdateStamina(bool Increase)

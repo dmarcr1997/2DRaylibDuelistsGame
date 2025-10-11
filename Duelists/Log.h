@@ -3,10 +3,10 @@
 #include <vector>
 
 enum LogType {
-	LOG_DEFAULT,
-	LOG_INFO,
-	LOG_WARNING,
-	LOG_ERROR
+	L_LOG_DEFAULT,
+	L_LOG_INFO,
+	L_LOG_WARNING,
+	L_LOG_ERROR
 };
 
 struct LogEntry

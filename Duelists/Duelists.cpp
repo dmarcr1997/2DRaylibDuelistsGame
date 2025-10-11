@@ -7,59 +7,85 @@
 #include "Enemy.h"
 #include "Log.h"
 #include "InventoryItem.h"
+#include "raylib.h"
 
-bool CheckParrySuccess(int difficulty, int stamina)
-{
-    int successChance = 30 + (5 * stamina) - (2 * difficulty);
-    if (successChance < 5) successChance = 5;
-    if (successChance > 95) successChance = 95;
 
-    std::mt19937 Generator(std::random_device{}());
-    std::uniform_int_distribution<> Distribution(1, 100);
-    int Roll = Distribution(Generator);
-    return Roll <= successChance;
-}
-
+bool CheckParrySuccess(int difficulty, int stamina);
 void ProcessOutcome(Player& MainPlayer, Enemy& MainEnemy, int RoundNumber);
 void FindItem(Player& MainPlayer, Enemy& MainEnemy, int RoundNumber);
 
 int main()
 {
-    Player MainPlayer(5, 2, 10, 2, "Hero");
+	//Raylib init
+	const Vector2 screenDims = { 800, 600 };
+	InitWindow(
+		screenDims.x,
+		screenDims.y,
+		"Dueling Game"
+	);
+	SetTargetFPS(60);
+
+	//Game init
+	Player MainPlayer(5, 2, 10, 2, "Hero");
 	Enemy MainEnemy(1, 1, 0, 1, "Goblin");
 	int RoundNumber = 1;
-	while (MainPlayer.IsAlive()) { 
-		Log::Line();
-		Log::LogMessage(LOG_DEFAULT, ("ROUND " + std::to_string(RoundNumber)));
-		Log::Line();
-		Log::NewLine();
+	bool GameOver = false;
+	while (!WindowShouldClose()) {
+		BeginDrawing();
+		ClearBackground(BLACK);
+		if (GameOver) {
+			DrawText("Thanks for playing!\n", 190, 200, 20, GREEN);
+			DrawText("Game Over. Press ESC to exit.", 190, 220, 20, LIGHTGRAY);
+			EndDrawing();
+			continue;
+		}
+
+		std::string RoundMessage = "ROUND " + std::to_string(RoundNumber);
+		DrawText(RoundMessage.c_str(), 10, 15, 20, LIGHTGRAY);
 
 		ProcessOutcome(MainPlayer, MainEnemy, RoundNumber);
+
 		if (!MainEnemy.IsAlive()) {
-			Log::LogMessage(LOG_INFO, ("You have defeated " + MainEnemy.GetName() + "!"));
+			std::string EnemyDefeatMessage = "You have defeated " + MainEnemy.GetName() + "!";
+			DrawText(EnemyDefeatMessage.c_str(), 190, 200, 20, LIGHTGRAY);
 			RoundNumber++;
 			FindItem(MainPlayer, MainEnemy, RoundNumber);
 			if (RoundNumber > 5) {
-				Log::LogMessage(LOG_INFO, "You have defeated all enemies! You win!");
-				break;
+				DrawText("You have defeated all enemies! You win!", 190, 220, 20, GREEN);
+				GameOver = true;
+				continue;
 			}
 			MainEnemy.IncreaseDifficulty(RoundNumber);
 
 			MainPlayer.ResetStats();
-			Log::LogMessage(LOG_INFO, "You recover your stamina and energy for the next fight!");
-			Log::Line();
-            Log::LogMessage(LOG_WARNING, ("Now facing: " + MainEnemy.GetName() +
-                " (Health: " + std::to_string(MainEnemy.GetHealth()) +
-                ", Attack: " + std::to_string(MainEnemy.GetAttackPower()) + ")\n"));
+			DrawText("You recover your stamina and energy for the next fight!", 190, 220, 20, GREEN);
+			
+			DrawText(("Now facing: " + MainEnemy.GetName() +
+				" (Health: " + std::to_string(MainEnemy.GetHealth()) +
+				", Attack: " + std::to_string(MainEnemy.GetAttackPower()) + ")\n").c_str(), 190, 240, 20, LIGHTGRAY);
 
 		}
+
+		if (!MainPlayer.IsAlive()) {
+			DrawText("You have been defeated! Game Over!\n", 190, 220, 20, GREEN);
+			GameOver = true;
+		}
+		EndDrawing();
 	}
-	Log::Line();
-	if(!MainPlayer.IsAlive()) {
-		Log::LogMessage(LOG_ERROR, "You have been defeated! Game Over!\n");
-	}
-	Log::LogMessage(LOG_DEFAULT, "Thanks for playing!\n");
+
 	return 0;
+}
+
+bool CheckParrySuccess(int difficulty, int stamina)
+{
+	int successChance = 30 + (5 * stamina) - (2 * difficulty);
+	if (successChance < 5) successChance = 5;
+	if (successChance > 95) successChance = 95;
+
+	std::mt19937 Generator(std::random_device{}());
+	std::uniform_int_distribution<> Distribution(1, 100);
+	int Roll = Distribution(Generator);
+	return Roll <= successChance;
 }
 
 void ProcessOutcome(Player& MainPlayer, Enemy& MainEnemy, int RoundNumber)
@@ -75,68 +101,67 @@ void ProcessOutcome(Player& MainPlayer, Enemy& MainEnemy, int RoundNumber)
 		(MainEnemyAction == DEFEND) ?
 		"Defend" : (MainEnemyAction == PARRY) ? "Parry" : "None";
 	Log::Line();
-	Log::SpacedMessage(LOG_DEFAULT, ("Player " + PlayerActionStr + "s \t | \t" + "Enemy " + MainEnemyActionStr + "s"));
+	DrawText(("Player " + PlayerActionStr + "s \t | \t" + "Enemy " + MainEnemyActionStr + "s").c_str(),  10, 40, 20, LIGHTGRAY);
 	Log::Line();
 	switch (PlayerAction) {
 	case ATTACK:
 		switch (MainEnemyAction) {
-			case ATTACK:
-				Log::LogMessage(LOG_WARNING, "Its a clash! The weapons ring as they hit eachother!");
-				break;
-			case DEFEND:
-					Log::LogMessage(LOG_ERROR, (MainEnemy.GetName() + " blocks your attack!"));
-					MainEnemy.UpdateHealth(-(MainPlayer.GetAttackPower() / 2));
-					break;
-			case PARRY:
-				Log::LogMessage(LOG_INFO, (MainEnemy.GetName() + " parries your attack and "));
-				if (CheckParrySuccess(10 - (RoundNumber + 1), MainEnemy.GetStamina())) {
-					Log::LogMessage(LOG_ERROR, "counters!");
-					MainPlayer.UpdateHealth(-(MainEnemy.GetAttackPower() * 2));
-				}
-				else {
-					Log::LogMessage(LOG_INFO, "fails to counter!");
-					MainEnemy.UpdateHealth(-(MainPlayer.GetAttackPower() * 2));
-				}
-				break;
+		case ATTACK:
+			DrawText("Its a clash! The weapons ring as they hit eachother!", 10, 120, 20, YELLOW);
+			break;
+		case DEFEND:
+			DrawText((MainEnemy.GetName() + " blocks your attack!").c_str(), 10, 120, 20, RED);
+			MainEnemy.UpdateHealth(-(MainPlayer.GetAttackPower() / 2));
+			break;
+		case PARRY:
+			DrawText((MainEnemy.GetName() + " parries your attack and ").c_str(), 10, 120, 20, LIGHTGRAY);
+			if (CheckParrySuccess(10 - (RoundNumber + 1), MainEnemy.GetStamina())) {
+				DrawText("counters!", 10, 140, 20, RED);
+				MainPlayer.UpdateHealth(-(MainEnemy.GetAttackPower() * 2));
+			}
+			else {
+				DrawText("fails to counter!", 10, 140, 20, GREEN);
+				MainEnemy.UpdateHealth(-(MainPlayer.GetAttackPower() * 2));
+			}
+			break;
 		}
 		break;
 	case DEFEND:
 		switch (MainEnemyAction) {
-			case ATTACK:
-				Log::LogMessage(LOG_INFO, ("You block " + MainEnemy.GetName() + "'s attack!"));
-				MainPlayer.UpdateHealth(-(MainEnemy.GetAttackPower() / 2));
-				break;
-			case DEFEND:
-				Log::LogMessage(LOG_DEFAULT, ("You and " + MainEnemy.GetName() + " are recovering Stamina."));
-				break;
-			case PARRY:
-				Log::LogMessage(LOG_DEFAULT, (MainEnemy.GetName() + " misreads your tell and drains stamina while you recover!"));
-				break;
+		case ATTACK:
+			DrawText(("You block " + MainEnemy.GetName() + "'s attack!").c_str(), 10, 120, 20, LIGHTGRAY);
+			MainPlayer.UpdateHealth(-(MainEnemy.GetAttackPower() / 2));
+			break;
+		case DEFEND:
+			DrawText(("You and " + MainEnemy.GetName() + " are recovering Stamina.").c_str(), 10, 120, 20, YELLOW);
+			break;
+		case PARRY:
+			DrawText((MainEnemy.GetName() + " misreads your tell and drains stamina while you recover!").c_str(), 10, 120, 20, GREEN);
+			break;
 		}
 		break;
 	case PARRY:
 		switch (MainEnemyAction) {
-			case ATTACK:
-				Log::LogMessage(LOG_DEFAULT, ("You parry " + MainEnemy.GetName() + "'s attack and "));
-				if (CheckParrySuccess(10 - RoundNumber, MainPlayer.GetStamina())) {
-					Log::LogMessage(LOG_INFO, "counter!");
-					MainEnemy.UpdateHealth(-(MainPlayer.GetAttackPower() * 2));
-				}
-				else {
-					Log::LogMessage(LOG_ERROR, "fail to counter!");
-					MainPlayer.UpdateHealth(-(MainEnemy.GetAttackPower() * 2));
-				}
-				break;
-			case DEFEND:
-				Log::LogMessage(LOG_DEFAULT, ("You misread the tell and drain your stamina, " + MainEnemy.GetName() + " recovers!"));
-				break;
-			case PARRY:
-				Log::LogMessage(LOG_DEFAULT, ("You and " + MainEnemy.GetName() + " both try to parry, and drain stamina!"));
-				break;
+		case ATTACK:
+			DrawText(("You parry " + MainEnemy.GetName() + "'s attack and ").c_str(), 10, 120, 20, LIGHTGRAY);
+			if (CheckParrySuccess(10 - RoundNumber, MainPlayer.GetStamina())) {
+				DrawText("counter!", 10, 140, 20, GREEN);
+				MainEnemy.UpdateHealth(-(MainPlayer.GetAttackPower() * 2));
+			}
+			else {
+				DrawText("fail to counter!", 10, 140, 20, RED);
+				MainPlayer.UpdateHealth(-(MainEnemy.GetAttackPower() * 2));
+			}
+			break;
+		case DEFEND:
+			DrawText(("You misread the tell and drain your stamina, " + MainEnemy.GetName() + " recovers!").c_str(), 10, 120, 20, YELLOW);
+			break;
+		case PARRY:
+			DrawText(("You and " + MainEnemy.GetName() + " both try to parry, and drain stamina!").c_str(), 10, 120, 20, LIGHTGRAY);
+			break;
 		}
 		break;
 	}
-	Log::NewLine();
 }
 
 void FindItem(Player& MainPlayer, Enemy& MainEnemy, int RoundNumber)
@@ -164,7 +189,7 @@ void FindItem(Player& MainPlayer, Enemy& MainEnemy, int RoundNumber)
 	float ItemStaminaIncrease = StaminaDist(Generator);
 
 	InventoryItem NewItem = { ItemName, ItemHealthIncrease, ItemArmorIncrease, ItemStaminaIncrease, ItemPowerIncrease };
-    Log::LogMessage(LOG_INFO, (MainEnemy.GetName() + " dropped: " + ItemName + "!"));
+    DrawText((MainEnemy.GetName() + " dropped: " + ItemName + "!").c_str(), 190, 400, 20, DARKGREEN);
     MainPlayer.AddInventoryItem(NewItem);
 
 }
