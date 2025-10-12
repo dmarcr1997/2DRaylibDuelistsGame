@@ -9,9 +9,15 @@
 #include "InventoryItem.h"
 #include "raylib.h"
 
+enum GameState {
+	WAITING_FOR_INPUT,
+	PROCESSING,
+	GAME_OVER,
+	INFO
+};
 
 bool CheckParrySuccess(int difficulty, int stamina);
-void ProcessOutcome(Player& MainPlayer, Enemy& MainEnemy, int RoundNumber);
+void ProcessOutcome(Player& MainPlayer, Enemy& MainEnemy, Action PlayerAction, int RoundNumber);
 void FindItem(Player& MainPlayer, Enemy& MainEnemy, int RoundNumber);
 
 int main()
@@ -29,47 +35,92 @@ int main()
 	Player MainPlayer(5, 2, 10, 2, "Hero");
 	Enemy MainEnemy(1, 1, 0, 1, "Goblin");
 	int RoundNumber = 1;
-	bool GameOver = false;
+	int WaitDuration = 3;
+	GameState State = WAITING_FOR_INPUT;
+	GameState StateBuffer = WAITING_FOR_INPUT;
+
+	Action PlayerAction = NONE;
+
 	while (!WindowShouldClose()) {
+		if (State == INFO) {
+			WaitTime(WaitDuration);
+			State = StateBuffer;
+			WaitDuration = 3;
+		}
 		BeginDrawing();
 		ClearBackground(BLACK);
-		if (GameOver) {
+		if (State == GAME_OVER) {
 			DrawText("Thanks for playing!\n", 190, 200, 20, GREEN);
 			DrawText("Game Over. Press ESC to exit.", 190, 220, 20, LIGHTGRAY);
 			EndDrawing();
 			continue;
 		}
 
+		
 		std::string RoundMessage = "ROUND " + std::to_string(RoundNumber);
 		DrawText(RoundMessage.c_str(), 10, 15, 20, LIGHTGRAY);
-
-		ProcessOutcome(MainPlayer, MainEnemy, RoundNumber);
-
-		if (!MainEnemy.IsAlive()) {
-			std::string EnemyDefeatMessage = "You have defeated " + MainEnemy.GetName() + "!";
-			DrawText(EnemyDefeatMessage.c_str(), 190, 200, 20, LIGHTGRAY);
-			RoundNumber++;
-			FindItem(MainPlayer, MainEnemy, RoundNumber);
-			if (RoundNumber > 5) {
-				DrawText("You have defeated all enemies! You win!", 190, 220, 20, GREEN);
-				GameOver = true;
-				continue;
+		if (State == WAITING_FOR_INPUT) {
+			DrawText("Choose an Action - (1. Attack, 2. Parry, 3. Defend)", 10, 30, 20, GREEN);
+			switch (GetKeyPressed())
+			{
+				case KEY_ONE:
+					PlayerAction = ATTACK;
+					State = PROCESSING;
+					break;
+				case KEY_TWO:
+					if (MainPlayer.GetStamina() > 0) {
+						MainPlayer.UpdateStamina(false);
+						PlayerAction = PARRY;
+						State = PROCESSING;
+					}
+					else {
+						DrawText("You are Exhausted: You cannot Parry until you Defend(3)", 10, 300, 20, RED);
+						State = INFO;
+						StateBuffer = WAITING_FOR_INPUT;
+					}
+					break;
+				case KEY_THREE:
+					MainPlayer.UpdateStamina(true);
+					PlayerAction = DEFEND;
+					State = PROCESSING;
+					break;
+				default:
+					break;
 			}
-			MainEnemy.IncreaseDifficulty(RoundNumber);
+		} else if(State == PROCESSING) {
+			ProcessOutcome(MainPlayer, MainEnemy, PlayerAction, RoundNumber);
+			StateBuffer = WAITING_FOR_INPUT;
 
-			MainPlayer.ResetStats();
-			DrawText("You recover your stamina and energy for the next fight!", 190, 220, 20, GREEN);
-			
-			DrawText(("Now facing: " + MainEnemy.GetName() +
-				" (Health: " + std::to_string(MainEnemy.GetHealth()) +
-				", Attack: " + std::to_string(MainEnemy.GetAttackPower()) + ")\n").c_str(), 190, 240, 20, LIGHTGRAY);
+			if (!MainEnemy.IsAlive()) {
+				WaitDuration = 6;
+				std::string EnemyDefeatMessage = "You have defeated " + MainEnemy.GetName() + "!";
+				DrawText(EnemyDefeatMessage.c_str(), 190, 200, 20, LIGHTGRAY);
+				RoundNumber++;
+				FindItem(MainPlayer, MainEnemy, RoundNumber);
+				if (RoundNumber > 5) {
+					DrawText("You have defeated all enemies! You win!", 190, 220, 20, GREEN);
+					StateBuffer = GAME_OVER;
+				} else {
+					MainEnemy.IncreaseDifficulty(RoundNumber);
 
+					MainPlayer.ResetStats();
+					DrawText("You recover your stamina and energy for the next fight!", 190, 220, 20, GREEN);
+
+					DrawText(("Now facing: " + MainEnemy.GetName() +
+						" (Health: " + std::to_string(MainEnemy.GetHealth()) +
+						", Attack: " + std::to_string(MainEnemy.GetAttackPower()) + ")\n").c_str(), 190, 240, 20, LIGHTGRAY);
+					StateBuffer = WAITING_FOR_INPUT;
+				}
+				
+			}
+
+			if (!MainPlayer.IsAlive()) {
+				DrawText("You have been defeated! Game Over!\n", 190, 220, 20, GREEN);
+				StateBuffer = GAME_OVER;
+			}
+			State = INFO;
 		}
-
-		if (!MainPlayer.IsAlive()) {
-			DrawText("You have been defeated! Game Over!\n", 190, 220, 20, GREEN);
-			GameOver = true;
-		}
+		
 		EndDrawing();
 	}
 
@@ -88,9 +139,8 @@ bool CheckParrySuccess(int difficulty, int stamina)
 	return Roll <= successChance;
 }
 
-void ProcessOutcome(Player& MainPlayer, Enemy& MainEnemy, int RoundNumber)
+void ProcessOutcome(Player& MainPlayer, Enemy& MainEnemy, Action PlayerAction, int RoundNumber)
 {
-	Action PlayerAction = MainPlayer.ChooseAction();
 	Action MainEnemyAction = MainEnemy.ChooseAction();
 	std::string PlayerActionStr = (PlayerAction == ATTACK) ? 
 		"Attack" : 
@@ -101,7 +151,7 @@ void ProcessOutcome(Player& MainPlayer, Enemy& MainEnemy, int RoundNumber)
 		(MainEnemyAction == DEFEND) ?
 		"Defend" : (MainEnemyAction == PARRY) ? "Parry" : "None";
 	Log::Line();
-	DrawText(("Player " + PlayerActionStr + "s \t | \t" + "Enemy " + MainEnemyActionStr + "s").c_str(),  10, 40, 20, LIGHTGRAY);
+	DrawText(("Player " + PlayerActionStr + "s \t | \t" + "Enemy " + MainEnemyActionStr + "s").c_str(),  10, 60, 20, LIGHTGRAY);
 	Log::Line();
 	switch (PlayerAction) {
 	case ATTACK:
@@ -189,7 +239,7 @@ void FindItem(Player& MainPlayer, Enemy& MainEnemy, int RoundNumber)
 	float ItemStaminaIncrease = StaminaDist(Generator);
 
 	InventoryItem NewItem = { ItemName, ItemHealthIncrease, ItemArmorIncrease, ItemStaminaIncrease, ItemPowerIncrease };
-    DrawText((MainEnemy.GetName() + " dropped: " + ItemName + "!").c_str(), 190, 400, 20, DARKGREEN);
+    DrawText((MainEnemy.GetName() + " dropped: " + ItemName + "!").c_str(), 190, 380, 20, DARKGREEN);
     MainPlayer.AddInventoryItem(NewItem);
 
 }

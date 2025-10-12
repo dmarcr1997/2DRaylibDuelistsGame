@@ -1,30 +1,11 @@
 #include "Player.h"
 #include <iostream>
-#include "Log.h"
 #include "InventoryItem.h"
+#include "raylib.h"
 
 Action Player::ChooseAction()
 {
-    int Input;
-    while (true)
-    {
-		Log::LogMessage(LogType::L_LOG_DEFAULT, "Choose your action (1. Attack 2. Parry 3. Defend): ");
-        std::cin >> Input;
-        if (std::cin.fail() || Input < 1 || Input > 3)
-        {
-            std::cin.clear();
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-			Log::LogMessage(LogType::L_LOG_ERROR, "Invalid input. Please enter a number between 1 and 3(Attack, Parry, Defend).\n");
-        }
-        else if (Input == 2 && Stamina == 0) {
-            Log::LogMessage(LogType::L_LOG_ERROR, "You are Exhausted: You cannot Parry until you Defend(3)");
-        }
-        else {
-            break;
-        }
-    }
-    Input -= 1;
-	return GetActionFromInput(Input);
+    return GetActionFromInput(3);
 }
 
 void Player::AddInventoryItem(InventoryItem newItem)
@@ -37,13 +18,10 @@ void Player::AddInventoryItem(InventoryItem newItem)
     AttackPower = newAttackPower;
     Stamina = newStamina;
     Armor = newArmor;
-    Log::NewLine();
-    Log::LogMessage(LogType::L_LOG_DEFAULT, ("Equipped: " + newItem.name));
-    Log::Line();
-    Log::LogMessage(LogType::L_LOG_INFO, "STATS \nHealthIncr: " + std::to_string(newItem.healthIncrease / 100));
-    Log::LogMessage(LogType::L_LOG_INFO, "AttackIncr: " + std::to_string(newItem.attackIncrease / 100));
-    Log::LogMessage(LogType::L_LOG_INFO, "StaminaIncr: " + std::to_string(newItem.staminaIncrease / 100));
-    Log::LogMessage(LogType::L_LOG_INFO, "ArmorIncr: " + std::to_string(newItem.armorIncrease / 100));
-    Log::Line();
+    DrawText(("Equipped: " + newItem.name).c_str(), 190, 420, 20, LIGHTGRAY);
+    DrawText(("STATS \nHealthIncr: " + std::to_string(newItem.healthIncrease / 100)).c_str(), 190, 440, 20,LIGHTGRAY);
+    DrawText(("AttackIncr: " + std::to_string(newItem.attackIncrease / 100)).c_str(), 190, 480, 20,LIGHTGRAY);
+    DrawText(("StaminaIncr: " + std::to_string(newItem.staminaIncrease / 100)).c_str(), 190, 500, 20,LIGHTGRAY);
+    DrawText(("ArmorIncr: " + std::to_string(newItem.armorIncrease / 100)).c_str(), 190, 520, 20,LIGHTGRAY);
     items.push_back(newItem);
 }
