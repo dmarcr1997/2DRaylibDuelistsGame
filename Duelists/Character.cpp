@@ -24,9 +24,11 @@ void Character::UpdateHealth(int Amount)
     DrawText((Name + " health changed by: " + std::to_string(Amount)).c_str(), 190, 300, 20, GREEN);
 }
 
-void Character::UpdateStamina(bool Increase)
+void Character::UpdateStamina(bool Increase, bool Heavy)
 {
-	Stamina = (Increase) ? Stamina +1 : Stamina -1;
+	int change = 1;
+	if (Heavy) change = 2;
+	Stamina = (Increase) ? Stamina +change : Stamina -change;
 	if (Stamina > MaxStamina) Stamina = MaxStamina;
 	else if (Stamina <= 0) Stamina = 0;
 }
@@ -48,7 +50,14 @@ Action Character::GetActionFromInput(int Input)
 	case 2:
 		UpdateStamina(true);
 		return DEFEND;
-	//TODO: ADD HEAL, DODGE, AND HEAVY ATTACK
+	case 3:
+		UpdateHealth(MaxHealth / 2);
+		return HEAL;
+	case 4:
+		return HEAVY_ATTACK;
+	case 5:	
+		UpdateStamina(false, true);
+		return DODGE;
 	default:
 		return NONE;
 	}

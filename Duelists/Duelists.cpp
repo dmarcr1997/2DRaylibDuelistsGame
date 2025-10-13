@@ -57,10 +57,10 @@ int main()
 		}
 
 		
-		std::string RoundMessage = "ROUND " + std::to_string(RoundNumber);
-		DrawText(RoundMessage.c_str(), 10, 15, 20, LIGHTGRAY);
+		std::string RoundMessage = "ROUND " + std::to_string(RoundNumber) + "\t|\tHEALTH: " + std::to_string(MainPlayer.GetHealth()) + "\t|\tSTAMINA: " + std::to_string(MainPlayer.GetStamina());
+		DrawText(RoundMessage.c_str(), 10, 10, 20, LIGHTGRAY);
 		if (State == WAITING_FOR_INPUT) {
-			DrawText("Choose an Action - (1. Attack, 2. Parry, 3. Defend)", 10, 30, 20, GREEN);
+			DrawText("Choose an Action - \n(1. Attack, 2. Parry, 3. Defend, 4. Heal, 5. Heavy Attack, 6. Dodge)", 10, 30, 20, GREEN);
 			switch (GetKeyPressed())
 			{
 				case KEY_ONE:
@@ -83,6 +83,35 @@ int main()
 					MainPlayer.UpdateStamina(true);
 					PlayerAction = DEFEND;
 					State = PROCESSING;
+					break;
+				case KEY_FOUR:
+					MainPlayer.UpdateHealth(MainPlayer.GetHealth() / 2);
+					PlayerAction = HEAL;
+					State = PROCESSING;
+					break;
+				case KEY_FIVE:
+					if (MainPlayer.GetStamina() > 0) {
+						MainPlayer.UpdateStamina(false);
+						PlayerAction = HEAVY_ATTACK;
+						State = PROCESSING;
+					}
+					else {
+						DrawText("You are Exhausted: You cannot Parry until you Defend(3)", 10, 300, 20, RED);
+						State = INFO;
+						StateBuffer = WAITING_FOR_INPUT;
+					}
+					break;
+				case KEY_SIX:
+					if (MainPlayer.GetStamina() > 0) {
+						MainPlayer.UpdateStamina(false, true);
+						PlayerAction = DODGE;
+						State = PROCESSING;
+					}
+					else {
+						DrawText("You are Exhausted: You cannot Parry until you Defend(3)", 10, 300, 20, RED);
+						State = INFO;
+						StateBuffer = WAITING_FOR_INPUT;
+					}
 					break;
 				default:
 					break;
@@ -150,9 +179,9 @@ void ProcessOutcome(Player& MainPlayer, Enemy& MainEnemy, Action PlayerAction, i
 		"Attack" :
 		(MainEnemyAction == DEFEND) ?
 		"Defend" : (MainEnemyAction == PARRY) ? "Parry" : "None";
-	Log::Line();
+	
 	DrawText(("Player " + PlayerActionStr + "s \t | \t" + "Enemy " + MainEnemyActionStr + "s").c_str(),  10, 60, 20, LIGHTGRAY);
-	Log::Line();
+	
 	switch (PlayerAction) {
 	case ATTACK:
 		switch (MainEnemyAction) {
@@ -174,6 +203,17 @@ void ProcessOutcome(Player& MainPlayer, Enemy& MainEnemy, Action PlayerAction, i
 				MainEnemy.UpdateHealth(-(MainPlayer.GetAttackPower() * 2));
 			}
 			break;
+		case HEAL:
+			DrawText(("You strike while " + MainEnemy.GetName() + " heals!").c_str(), 10, 120, 20, GREEN);
+			MainEnemy.UpdateHealth(-(MainPlayer.GetAttackPower()));
+			break;
+		case HEAVY_ATTACK:
+			DrawText((MainEnemy.GetName() + "'s Heavy Attack overpowers your attack!").c_str(), 10, 120, 20, RED);
+			MainPlayer.UpdateHealth(-(MainEnemy.GetAttackPower() / 2));
+			break;
+		case DODGE:
+			DrawText((MainEnemy.GetName() + " dodges your attack!").c_str(), 10, 120, 20, YELLOW);
+			break;
 		}
 		break;
 	case DEFEND:
@@ -187,6 +227,16 @@ void ProcessOutcome(Player& MainPlayer, Enemy& MainEnemy, Action PlayerAction, i
 			break;
 		case PARRY:
 			DrawText((MainEnemy.GetName() + " misreads your tell and drains stamina while you recover!").c_str(), 10, 120, 20, GREEN);
+			break;
+		case HEAL:
+			DrawText(("You block while " + MainEnemy.GetName() + " heals.").c_str(), 10, 120, 20, LIGHTGRAY);
+			break;
+		case HEAVY_ATTACK:
+			DrawText((MainEnemy.GetName() + "'s Heavy Attack crushes your defense!").c_str(), 10, 120, 20, RED);
+			MainPlayer.UpdateHealth(-(MainEnemy.GetAttackPower()));
+			break;
+		case DODGE:
+			DrawText((MainEnemy.GetName() + " misread the tell and drains stamina while you recover!").c_str(), 10, 120, 20, GREEN);
 			break;
 		}
 		break;
@@ -208,6 +258,102 @@ void ProcessOutcome(Player& MainPlayer, Enemy& MainEnemy, Action PlayerAction, i
 			break;
 		case PARRY:
 			DrawText(("You and " + MainEnemy.GetName() + " both try to parry, and drain stamina!").c_str(), 10, 120, 20, LIGHTGRAY);
+			break;
+		case HEAL:
+			DrawText(("You misread the tell and drain your stamina, " + MainEnemy.GetName() + " heals!").c_str(), 10, 120, 20, YELLOW);
+			break;
+		case HEAVY_ATTACK:
+			DrawText(("You parry " + MainEnemy.GetName() + "'s heavy attack and ").c_str(), 10, 120, 20, LIGHTGRAY);
+			if (CheckParrySuccess(6 - RoundNumber, MainEnemy.GetStamina())) {
+				DrawText("counter!", 10, 140, 20, RED);
+				MainPlayer.UpdateHealth(-(MainEnemy.GetAttackPower() * 2));
+			}
+			else {
+				DrawText("fails to counter!", 10, 140, 20, GREEN);
+				MainEnemy.UpdateHealth(-(MainPlayer.GetAttackPower() * 2));
+			}
+			break;
+		case DODGE:
+			DrawText(("You parry and " + MainEnemy.GetName() + " dodges. You both drain stamina!").c_str(), 10, 120, 20, LIGHTGRAY);
+			break;
+		}
+		
+		break;
+	case HEAL:
+		switch (MainEnemyAction) {
+		case ATTACK:
+				DrawText((MainEnemy.GetName() + " attacks while you heal!").c_str(), 10, 120, 20, RED);
+				MainPlayer.UpdateHealth(-(MainEnemy.GetAttackPower()));
+				break;
+		case DEFEND:
+			DrawText(("You Heal and " + MainEnemy.GetName() + " recover.").c_str(), 10, 120, 20, GREEN);
+			break;
+		case PARRY:
+			DrawText(("You misread the tell and drain your stamina, " + MainEnemy.GetName() + " recovers!").c_str(), 10, 120, 20, YELLOW);
+			break;
+		case HEAL:
+			DrawText("You and the enemy both heal.", 10, 120, 20, LIGHTGRAY);
+			break;
+		case HEAVY_ATTACK:
+			DrawText((MainEnemy.GetName() + "'s Heavy Attack crushes you while you heal!").c_str(), 10, 120, 20, RED);
+			MainPlayer.UpdateHealth(-(MainEnemy.GetAttackPower() * 2));
+			break;
+		case DODGE:
+			DrawText((MainEnemy.GetName() + " misread the tell drains stamina while you heal ").c_str(), 10, 120, 20, GREEN);
+			break;
+		}
+		break;
+	case HEAVY_ATTACK:
+		switch (MainEnemyAction) {
+		case ATTACK:
+			DrawText(("Your heavy attack overpowers the attack of " + MainEnemy.GetName()).c_str(), 10, 120, 20, GREEN);
+			MainEnemy.UpdateHealth(-(MainPlayer.GetAttackPower() / 2));
+			break;
+		case DEFEND:
+			DrawText(("Your heavy attack crushes the defense of " + MainEnemy.GetName()).c_str(), 10, 120, 20, GREEN);
+			MainEnemy.UpdateHealth(-(MainPlayer.GetAttackPower()));
+			break;
+		case PARRY:
+			DrawText((MainEnemy.GetName() + " parries your heavy attack and ").c_str(), 10, 120, 20, LIGHTGRAY);
+			if (CheckParrySuccess(6 - RoundNumber, MainEnemy.GetStamina())) {
+				DrawText("counters!", 10, 140, 20, RED);
+				MainPlayer.UpdateHealth(-(MainEnemy.GetAttackPower() * 2));
+			}
+			else {
+				DrawText("fails to counter!", 10, 140, 20, GREEN);
+				MainEnemy.UpdateHealth(-(MainPlayer.GetAttackPower() * 2));
+			}
+			break;
+		case HEAL:
+			DrawText(("You strike while " + MainEnemy.GetName() + " heals!").c_str(), 10, 120, 20, GREEN);
+			MainEnemy.UpdateHealth(-(MainPlayer.GetAttackPower() * 2));
+			break;
+		case HEAVY_ATTACK:
+			DrawText("Both heavy attacks collide with a massive shockwave!", 10, 120, 20, YELLOW);
+			MainPlayer.UpdateStamina(false, true);
+			MainEnemy.UpdateStamina(false, true);
+			break;
+		case DODGE:
+			DrawText((MainEnemy.GetName() + " dodged your heavy attack!").c_str(), 10, 120, 20, YELLOW);
+			break;
+		}
+		break;
+	case DODGE:
+		switch (MainEnemyAction) {
+		case ATTACK:
+			DrawText(("You dodged " + MainEnemy.GetName() + "'s  attack").c_str(), 10, 120, 20, GREEN);
+			break;
+		case DEFEND:
+			DrawText(("You misread the tell and drain your stamina, " + MainEnemy.GetName() + " recovers!").c_str(), 10, 120, 20, LIGHTGRAY);
+			break;
+		case PARRY:
+			DrawText(("You dodge and " + MainEnemy.GetName() + " tries to parry. You both drain stamina!").c_str(), 10, 120, 20, LIGHTGRAY);
+			break;
+		case HEAL:
+			DrawText(("You misread the tell and drain your stamina, " + MainEnemy.GetName() + " recovers!").c_str(), 10, 120, 20, LIGHTGRAY);
+			break;
+		case HEAVY_ATTACK:
+			DrawText(("You dodged " + MainEnemy.GetName() + "'s  heavy attack").c_str(), 10, 120, 20, GREEN);
 			break;
 		}
 		break;

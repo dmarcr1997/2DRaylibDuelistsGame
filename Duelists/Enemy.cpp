@@ -1,6 +1,6 @@
 #include "Enemy.h"
 
-Enemy::Enemy(int MaxHealth, int AttackPower, int Armor, int MaxStamina, std::string Name) : Character(MaxHealth, AttackPower, Armor, MaxStamina, Name), Generator(std::random_device{}()), Distribution(0,2) {}
+Enemy::Enemy(int MaxHealth, int AttackPower, int Armor, int MaxStamina, std::string Name) : Character(MaxHealth, AttackPower, Armor, MaxStamina, Name), Generator(std::random_device{}()), Distribution(0,5) {}
 
 
 Action Enemy::ChooseAction()
@@ -8,8 +8,9 @@ Action Enemy::ChooseAction()
 	int Input = Distribution(Generator);
 	if (Stamina == 0) 
 	{
-		std::uniform_int_distribution<> LimitedDistribution(0,2);
-		Input = LimitedDistribution(Generator) == 1 ? 0 : 2;
+		std::uniform_int_distribution<> LimitedDistribution(0,5);
+		int num = LimitedDistribution(Generator);
+		Input = (num == 1 || num == 4 || num == 5) ? 2 : num;
 	}
 	return GetActionFromInput(Input);
 }

@@ -6,6 +6,9 @@ enum Action {
 	ATTACK,
 	PARRY,
 	DEFEND,
+	HEAL,
+	DODGE,
+	HEAVY_ATTACK,
 	NONE
 };
 
@@ -16,7 +19,7 @@ public:
 	int GetAttackPower() const { return AttackPower; }
 	int GetStamina() const { return Stamina;  }
 	void UpdateHealth(int Amount);
-	void UpdateStamina(bool Increase);
+	void UpdateStamina(bool Increase, bool Heavy=false);
 	bool IsAlive() const { return Health > 0; }
 	void ResetStats();
 	virtual Action ChooseAction() = 0;

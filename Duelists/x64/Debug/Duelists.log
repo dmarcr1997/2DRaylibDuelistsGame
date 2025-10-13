@@ -1,2 +1,9 @@
-﻿  Duelists.cpp
-  Duelists.vcxproj -> C:\Users\mossy\Documents\Vertex\Duelists\x64\Debug\Duelists.exe
+﻿  Character.cpp
+C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Character.cpp(3,10): fatal  error C1083: Cannot open include file: 'raylib.h': No such file or directory
+  Duelists.cpp
+C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(10,10): fatal  error C1083: Cannot open include file: 'raylib.h': No such file or directory
+  Enemy.cpp
+  Log.cpp
+  Player.cpp
+C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Player.cpp(4,10): fatal  error C1083: Cannot open include file: 'raylib.h': No such file or directory
+  Generating Code...
