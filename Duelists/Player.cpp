@@ -18,10 +18,10 @@ void Player::AddInventoryItem(InventoryItem newItem)
     AttackPower = newAttackPower;
     Stamina = newStamina;
     Armor = newArmor;
-    DrawText(("Equipped: " + newItem.name).c_str(), 190, 420, 20, LIGHTGRAY);
-    DrawText(("STATS \nHealthIncr: " + std::to_string(newItem.healthIncrease / 100)).c_str(), 190, 440, 20,LIGHTGRAY);
-    DrawText(("AttackIncr: " + std::to_string(newItem.attackIncrease / 100)).c_str(), 190, 480, 20,LIGHTGRAY);
-    DrawText(("StaminaIncr: " + std::to_string(newItem.staminaIncrease / 100)).c_str(), 190, 500, 20,LIGHTGRAY);
-    DrawText(("ArmorIncr: " + std::to_string(newItem.armorIncrease / 100)).c_str(), 190, 520, 20,LIGHTGRAY);
+    DrawText(("Equipped: " + newItem.name).c_str(), 400, 420, 20, LIGHTGRAY);
+    DrawText(("STATS \nHealthIncr: " + std::to_string(newItem.healthIncrease / 100)).c_str(), 400, 440, 20,LIGHTGRAY);
+    DrawText(("AttackIncr: " + std::to_string(newItem.attackIncrease / 100)).c_str(), 400, 480, 20,LIGHTGRAY);
+    DrawText(("StaminaIncr: " + std::to_string(newItem.staminaIncrease / 100)).c_str(), 400, 500, 20,LIGHTGRAY);
+    DrawText(("ArmorIncr: " + std::to_string(newItem.armorIncrease / 100)).c_str(), 400, 520, 20,LIGHTGRAY);
     items.push_back(newItem);
 }

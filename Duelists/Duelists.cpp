@@ -3,6 +3,8 @@
 
 #include <iostream>
 #include <random>
+#include <map>
+#include <functional>
 #include "Player.h"
 #include "Enemy.h"
 #include "Log.h"
@@ -13,12 +15,25 @@ enum GameState {
 	WAITING_FOR_INPUT,
 	PROCESSING,
 	GAME_OVER,
-	INFO
+	INFO,
+	LOOT
+};
+
+struct CombatOutcome
+{
+	std::string OutcomeText;
+	Color TextColor;
+	std::function<void(Player& player, Enemy& enemy)> StatsAdjustments;
 };
 
 bool CheckParrySuccess(int difficulty, int stamina);
 void ProcessOutcome(Player& MainPlayer, Enemy& MainEnemy, Action PlayerAction, int RoundNumber);
+void DrawOutcome(Player& MainPlayer, Enemy& MainEnemy, Action& PlayerAction, GameState& State, GameState& StateBuffer, int& RoundNumber, int& WaitDuration);
+void DrawLootOutcome(Enemy& MainEnemy, int& RoundNumber, Player& MainPlayer, GameState& State, GameState& StateBuffer);
 void FindItem(Player& MainPlayer, Enemy& MainEnemy, int RoundNumber);
+void DrawWaitForInput(Action& PlayerAction, GameState& State, Player& MainPlayer, GameState& StateBuffer);
+void DrawFirstFrame(Texture2D texture, int posX, int posY, bool flipped);
+
 
 int main()
 {
@@ -29,6 +44,10 @@ int main()
 		screenDims.y,
 		"Dueling Game"
 	);
+
+	Texture2D Background = LoadTexture("../SourceArt/Arena.png");
+	Texture2D PlayerTexture = LoadTexture("../SourceArt/Characters/Knight/Knight_IdleBlinking_Sprite.png");
+	Texture2D EnemyTexture = LoadTexture("../SourceArt/Characters/Goblin/Goblin_IdleBlinking_Sprite.png"); 
 	SetTargetFPS(60);
 
 	//Game init
@@ -47,8 +66,14 @@ int main()
 			State = StateBuffer;
 			WaitDuration = 3;
 		}
+
+
 		BeginDrawing();
 		ClearBackground(BLACK);
+		DrawTexture(Background, 0, 0, WHITE);
+		DrawFirstFrame(PlayerTexture, 100, 100, false);
+		DrawFirstFrame(EnemyTexture, 600, 100, true);
+		
 		if (State == GAME_OVER) {
 			DrawText("Thanks for playing!\n", 190, 200, 20, GREEN);
 			DrawText("Game Over. Press ESC to exit.", 190, 220, 20, LIGHTGRAY);
@@ -58,102 +83,96 @@ int main()
 
 		
 		std::string RoundMessage = "ROUND " + std::to_string(RoundNumber) + "\t|\tHEALTH: " + std::to_string(MainPlayer.GetHealth()) + "\t|\tSTAMINA: " + std::to_string(MainPlayer.GetStamina());
-		DrawText(RoundMessage.c_str(), 10, 10, 20, LIGHTGRAY);
-		if (State == WAITING_FOR_INPUT) {
-			DrawText("Choose an Action - \n(1. Attack, 2. Parry, 3. Defend, 4. Heal, 5. Heavy Attack, 6. Dodge)", 10, 30, 20, GREEN);
-			switch (GetKeyPressed())
-			{
-				case KEY_ONE:
-					PlayerAction = ATTACK;
-					State = PROCESSING;
-					break;
-				case KEY_TWO:
-					if (MainPlayer.GetStamina() > 0) {
-						MainPlayer.UpdateStamina(false);
-						PlayerAction = PARRY;
-						State = PROCESSING;
-					}
-					else {
-						DrawText("You are Exhausted: You cannot Parry until you Defend(3)", 10, 300, 20, RED);
-						State = INFO;
-						StateBuffer = WAITING_FOR_INPUT;
-					}
-					break;
-				case KEY_THREE:
-					MainPlayer.UpdateStamina(true);
-					PlayerAction = DEFEND;
-					State = PROCESSING;
-					break;
-				case KEY_FOUR:
-					MainPlayer.UpdateHealth(MainPlayer.GetHealth() / 2);
-					PlayerAction = HEAL;
-					State = PROCESSING;
-					break;
-				case KEY_FIVE:
-					if (MainPlayer.GetStamina() > 0) {
-						MainPlayer.UpdateStamina(false);
-						PlayerAction = HEAVY_ATTACK;
-						State = PROCESSING;
-					}
-					else {
-						DrawText("You are Exhausted: You cannot Parry until you Defend(3)", 10, 300, 20, RED);
-						State = INFO;
-						StateBuffer = WAITING_FOR_INPUT;
-					}
-					break;
-				case KEY_SIX:
-					if (MainPlayer.GetStamina() > 0) {
-						MainPlayer.UpdateStamina(false, true);
-						PlayerAction = DODGE;
-						State = PROCESSING;
-					}
-					else {
-						DrawText("You are Exhausted: You cannot Parry until you Defend(3)", 10, 300, 20, RED);
-						State = INFO;
-						StateBuffer = WAITING_FOR_INPUT;
-					}
-					break;
-				default:
-					break;
-			}
-		} else if(State == PROCESSING) {
-			ProcessOutcome(MainPlayer, MainEnemy, PlayerAction, RoundNumber);
-			StateBuffer = WAITING_FOR_INPUT;
-
-			if (!MainEnemy.IsAlive()) {
-				WaitDuration = 6;
-				std::string EnemyDefeatMessage = "You have defeated " + MainEnemy.GetName() + "!";
-				DrawText(EnemyDefeatMessage.c_str(), 190, 200, 20, LIGHTGRAY);
-				RoundNumber++;
-				FindItem(MainPlayer, MainEnemy, RoundNumber);
-				if (RoundNumber > 5) {
-					DrawText("You have defeated all enemies! You win!", 190, 220, 20, GREEN);
-					StateBuffer = GAME_OVER;
-				} else {
-					MainEnemy.IncreaseDifficulty(RoundNumber);
-
-					MainPlayer.ResetStats();
-					DrawText("You recover your stamina and energy for the next fight!", 190, 220, 20, GREEN);
-
-					DrawText(("Now facing: " + MainEnemy.GetName() +
-						" (Health: " + std::to_string(MainEnemy.GetHealth()) +
-						", Attack: " + std::to_string(MainEnemy.GetAttackPower()) + ")\n").c_str(), 190, 240, 20, LIGHTGRAY);
-					StateBuffer = WAITING_FOR_INPUT;
-				}
-				
-			}
-
-			if (!MainPlayer.IsAlive()) {
-				DrawText("You have been defeated! Game Over!\n", 190, 220, 20, GREEN);
-				StateBuffer = GAME_OVER;
-			}
+		DrawText(RoundMessage.c_str(), 10, 400, 20, LIGHTGRAY);
+		if (State == LOOT) {
+			DrawLootOutcome(MainEnemy, RoundNumber, MainPlayer, State, StateBuffer);
 			State = INFO;
+			EndDrawing();
+			continue;
 		}
-		
+		if (State == WAITING_FOR_INPUT) {
+			DrawWaitForInput(PlayerAction, State, MainPlayer, StateBuffer);
+		} else if(State == PROCESSING) {
+			DrawOutcome(MainPlayer, MainEnemy, PlayerAction, State, StateBuffer, RoundNumber, WaitDuration);
+		}
+
 		EndDrawing();
 	}
-
+	UnloadTexture(Background);
 	return 0;
+}
+
+void DrawFirstFrame(Texture2D texture, int posX, int posY, bool flipped) {
+    int frameWidth = texture.width / 4;
+    int frameHeight = texture.height / 3;
+    Rectangle sourceRec = { 0, 0, (float)frameWidth, (float)frameHeight };
+    Vector2 position = { (float)posX, (float)posY };
+	if (flipped) {
+		sourceRec.x = (float)frameWidth; // start at right edge
+		sourceRec.width = -(float)frameWidth; // negative width flips horizontally
+		Vector2 enemyPosition = { 600.0f, 100.0f };
+	}
+    DrawTextureRec(texture, sourceRec, position, WHITE);
+}
+
+void DrawWaitForInput(Action& PlayerAction, GameState& State, Player& MainPlayer, GameState& StateBuffer)
+{
+	DrawText("Choose an Action - \n(1. Attack, 2. Parry, 3. Defend, 4. Heal, 5. Heavy Attack, 6. Dodge)", 10, 420, 20, GREEN);
+	switch (GetKeyPressed())
+	{
+	case KEY_ONE:
+		PlayerAction = ATTACK;
+		State = PROCESSING;
+		break;
+	case KEY_TWO:
+		if (MainPlayer.GetStamina() > 0) {
+			MainPlayer.UpdateStamina(false);
+			PlayerAction = PARRY;
+			State = PROCESSING;
+		}
+		else {
+			DrawText("You are Exhausted: You cannot Parry until you Defend(3)", 10, 300, 20, RED);
+			State = INFO;
+			StateBuffer = WAITING_FOR_INPUT;
+		}
+		break;
+	case KEY_THREE:
+		MainPlayer.UpdateStamina(true);
+		PlayerAction = DEFEND;
+		State = PROCESSING;
+		break;
+	case KEY_FOUR:
+		MainPlayer.UpdateHealth(MainPlayer.GetHealth() / 2);
+		PlayerAction = HEAL;
+		State = PROCESSING;
+		break;
+	case KEY_FIVE:
+		if (MainPlayer.GetStamina() > 0) {
+			MainPlayer.UpdateStamina(false);
+			PlayerAction = HEAVY_ATTACK;
+			State = PROCESSING;
+		}
+		else {
+			DrawText("You are Exhausted: You cannot do that until you Defend(3)", 10, 300, 20, RED);
+			State = INFO;
+			StateBuffer = WAITING_FOR_INPUT;
+		}
+		break;
+	case KEY_SIX:
+		if (MainPlayer.GetStamina() > 0) {
+			MainPlayer.UpdateStamina(false, true);
+			PlayerAction = DODGE;
+			State = PROCESSING;
+		}
+		else {
+			DrawText("You are Exhausted: You cannot do that until you Defend(3)", 10, 300, 20, RED);
+			State = INFO;
+			StateBuffer = WAITING_FOR_INPUT;
+		}
+		break;
+	default:
+		break;
+	}
 }
 
 bool CheckParrySuccess(int difficulty, int stamina)
@@ -168,196 +187,171 @@ bool CheckParrySuccess(int difficulty, int stamina)
 	return Roll <= successChance;
 }
 
+void DrawOutcome(Player& MainPlayer, Enemy& MainEnemy, Action& PlayerAction, GameState& State, GameState& StateBuffer, int& RoundNumber, int& WaitDuration)
+{
+	ProcessOutcome(MainPlayer, MainEnemy, PlayerAction, RoundNumber);
+	StateBuffer = WAITING_FOR_INPUT;
+
+	if (!MainEnemy.IsAlive()) {
+		State = LOOT;
+		return;
+	}
+
+	if (!MainPlayer.IsAlive()) {
+		DrawText("You have been defeated! Game Over!\n", 400, 300, 20, RED);
+		StateBuffer = GAME_OVER;
+	}
+	State = INFO;
+}
+
+void DrawLootOutcome(Enemy& MainEnemy, int& RoundNumber, Player& MainPlayer, GameState& State, GameState& StateBuffer)
+{
+	std::string EnemyDefeatMessage = "You have defeated " + MainEnemy.GetName() + "!";
+	DrawText(EnemyDefeatMessage.c_str(), 10, 10, 20, GREEN);
+	RoundNumber++;
+	FindItem(MainPlayer, MainEnemy, RoundNumber);
+	if (RoundNumber > 5) {
+		DrawText("You have defeated all enemies! You win!", 400, 300, 60, GREEN);
+		StateBuffer = GAME_OVER;
+	}
+	else {
+		MainEnemy.IncreaseDifficulty(RoundNumber);
+
+		MainPlayer.ResetStats();
+		DrawText("You recover your stamina and energy for the next fight!", 10, 40, 20, LIGHTGRAY);
+
+		DrawText(("Now facing: " + MainEnemy.GetName() +
+			" (Health: " + std::to_string(MainEnemy.GetHealth()) +
+			", Attack: " + std::to_string(MainEnemy.GetAttackPower()) + ")\n").c_str(), 400, 80, 20, LIGHTGRAY);
+		StateBuffer = WAITING_FOR_INPUT;
+	}
+}
+
 void ProcessOutcome(Player& MainPlayer, Enemy& MainEnemy, Action PlayerAction, int RoundNumber)
 {
 	Action MainEnemyAction = MainEnemy.ChooseAction();
-	std::string PlayerActionStr = (PlayerAction == ATTACK) ? 
-		"Attack" : 
-		(PlayerAction == DEFEND) ? 
-			"Defend" : (PlayerAction == PARRY) ? "Parry" : "None";
-	std::string MainEnemyActionStr = (MainEnemyAction == ATTACK) ?
-		"Attack" :
-		(MainEnemyAction == DEFEND) ?
-		"Defend" : (MainEnemyAction == PARRY) ? "Parry" : "None";
+
+	auto GetActionString = [](Action action) -> std::string {
+		switch (action) {
+			case ATTACK: return "Attack";
+			case DEFEND: return "Defend";
+			case PARRY: return "Parry";
+			case HEAL: return "Heal";
+			case HEAVY_ATTACK: return "Heavy Attack";
+			case DODGE: return "Dodge";
+			default: return "None";
+		}
+	};
+
+	std::string PlayerActionStr = GetActionString(PlayerAction);
+	std::string MainEnemyActionStr = GetActionString(MainEnemyAction);
 	
-	DrawText(("Player " + PlayerActionStr + "s \t | \t" + "Enemy " + MainEnemyActionStr + "s").c_str(),  10, 60, 20, LIGHTGRAY);
+	DrawText(("Player " + PlayerActionStr + "s \t | \t" + "Enemy " + MainEnemyActionStr + "s").c_str(),  10, 10, 20, LIGHTGRAY);
+
+	const std::map<std::pair<Action, Action>, CombatOutcome> OutcomeMap = {
+		{ {ATTACK, ATTACK}, {"Its a clash! The weapons ring as they hit eachother!", DARKGRAY, [](Player& player , Enemy& enemy) {}}},
+		{ {ATTACK, DEFEND}, {MainEnemy.GetName() + " blocks your attack!", RED, [](Player& player , Enemy& enemy) {
+			enemy.UpdateHealth(-(player.GetAttackPower() / 2));
+		}} },
+		{ {ATTACK, PARRY}, {MainEnemy.GetName() + " parries your attack and ", LIGHTGRAY, [RoundNumber](Player& player , Enemy& enemy) {
+			if (CheckParrySuccess(10 - (RoundNumber + 1), enemy.GetStamina())) {
+				DrawText("counters!", 10, 320, 20, RED);
+				player.UpdateHealth(-(enemy.GetAttackPower() * 2));
+			}
+			else {
+				DrawText("fails to counter!", 10, 320, 20, GREEN);
+				enemy.UpdateHealth(-(player.GetAttackPower() * 2));
+			}
+		}} },
+		{ {ATTACK, HEAL}, {"You strike while " + MainEnemy.GetName() + " heals!", GREEN, [](Player& player , Enemy& enemy) {
+			enemy.UpdateHealth(-(player.GetAttackPower()));
+		}} },
+		{ {ATTACK, HEAVY_ATTACK}, {MainEnemy.GetName() + "'s Heavy Attack overpowers your attack!", RED, [](Player& player , Enemy& enemy) {
+			player.UpdateHealth(-(enemy.GetAttackPower() / 2));
+		}} },
+		{ {ATTACK, DODGE}, {MainEnemy.GetName() + " dodges your attack!", YELLOW, [](Player& player , Enemy& enemy) {}} },
+		{ {DEFEND, ATTACK}, {"You block " + MainEnemy.GetName() + "'s attack!", GREEN, [](Player& player , Enemy& enemy) {
+			player.UpdateHealth(-(enemy.GetAttackPower() / 2));
+		}} },
+		{ {DEFEND, DEFEND}, {"You and " + MainEnemy.GetName() + " are recovering Stamina.", LIGHTGRAY, [](Player& player , Enemy& enemy) {}} },
+		{ {DEFEND, PARRY}, {MainEnemy.GetName() + " misreads your tell and drains stamina while you recover!", GREEN, [](Player& player , Enemy& enemy) {}} },
+		{ {DEFEND, HEAL}, {"You block while " + MainEnemy.GetName() + " heals.", LIGHTGRAY, [](Player& player , Enemy& enemy) {}} },
+		{ {DEFEND, HEAVY_ATTACK}, {MainEnemy.GetName() + "'s Heavy Attack crushes your defense!", RED, [](Player& player , Enemy& enemy) {
+			player.UpdateHealth(-(enemy.GetAttackPower()));
+		}} },
+		{ {DEFEND, DODGE}, {MainEnemy.GetName() + " misread the tell and drains stamina while you recover!", GREEN, [](Player& player , Enemy& enemy) {}} },
+		{ {PARRY, ATTACK}, {"You parry " + MainEnemy.GetName() + "'s attack and ", LIGHTGRAY, [RoundNumber](Player& player , Enemy& enemy) {
+			if (CheckParrySuccess(10 - RoundNumber, player.GetStamina())) {
+				DrawText("counter!", 10, 320, 20, GREEN);
+				enemy.UpdateHealth(-(player.GetAttackPower() * 2));
+			}
+			else {
+				DrawText("fail to counter!", 10, 320, 20, RED);
+				player.UpdateHealth(-(enemy.GetAttackPower() * 2));
+			}
+		}} },
+		{ {PARRY, DEFEND}, {"You misread the tell and drain your stamina, " + MainEnemy.GetName() + " recovers!", YELLOW, [](Player& player , Enemy& enemy) {}} },
+		{ {PARRY, PARRY}, {"You and " + MainEnemy.GetName() + " both try to parry, and drain stamina!", LIGHTGRAY, [](Player& player , Enemy& enemy) {}} },
+		{ {PARRY, HEAL}, {"You misread the tell and drain your stamina, " + MainEnemy.GetName() + " heals!", YELLOW, [](Player& player , Enemy& enemy) {}} },
+		{ {PARRY, HEAVY_ATTACK}, {"You parry " + MainEnemy.GetName() + "'s heavy attack and ", LIGHTGRAY, [RoundNumber](Player& player , Enemy& enemy) {
+			if (CheckParrySuccess(6 - RoundNumber, enemy.GetStamina())) {
+				DrawText("counter!", 10, 320, 20, RED);
+				player.UpdateHealth(-(enemy.GetAttackPower() * 2));
+			}
+			else {
+				DrawText("fails to counter!", 10, 320, 20, GREEN);
+				enemy.UpdateHealth(-(player.GetAttackPower() * 2));
+			}
+		}} },
+		{ {PARRY, DODGE}, {"You parry and " + MainEnemy.GetName() + " dodges. You both drain stamina!", LIGHTGRAY, [](Player& player , Enemy& enemy) {}} },
+		{ {HEAL, ATTACK}, {MainEnemy.GetName() + " attacks while you heal!", RED, [](Player& player , Enemy& enemy) {
+			player.UpdateHealth(-(enemy.GetAttackPower()));
+		}} },
+		{ {HEAL, DEFEND}, {"You Heal and " + MainEnemy.GetName() + " recover.", GREEN, [](Player& player , Enemy& enemy) {}} },
+		{ {HEAL, PARRY}, {MainEnemy.GetName() + " misreads the tell and drains stamina while you heal.", GREEN, [](Player& player , Enemy& enemy) {}} },
+		{ {HEAL, HEAL}, {"You and the enemy both heal.", GREEN, [](Player& player , Enemy& enemy) {}} },
+		{ {HEAL, HEAVY_ATTACK}, {MainEnemy.GetName() + "'s Heavy Attack crushes you while you heal!", RED, [](Player& player , Enemy& enemy) {
+			player.UpdateHealth(-(enemy.GetAttackPower() * 2));
+		}} },
+		{ {HEAL, DODGE}, {MainEnemy.GetName() + " misread the tell drains stamina while you heal ", GREEN, [](Player& player , Enemy& enemy) {}} },
+		{ {HEAVY_ATTACK, ATTACK}, {"Your heavy attack overpowers the attack of " + MainEnemy.GetName(), GREEN, [](Player& player , Enemy& enemy) {
+			enemy.UpdateHealth(-(player.GetAttackPower() / 2));
+		}} },
+		{ {HEAVY_ATTACK, DEFEND}, {"Your heavy attack crushes the defense of " + MainEnemy.GetName(), GREEN, [](Player& player , Enemy& enemy) {
+			enemy.UpdateHealth(-(player.GetAttackPower()));
+		}} },
+		{ {HEAVY_ATTACK, PARRY}, {MainEnemy.GetName() + " parries your heavy attack and ", LIGHTGRAY, [RoundNumber](Player& player , Enemy& enemy) {
+			if (CheckParrySuccess(6 - RoundNumber, enemy.GetStamina())) {
+				DrawText("counters!", 10, 320, 20, RED);
+				player.UpdateHealth(-(enemy.GetAttackPower() * 2));
+			}
+			else {
+				DrawText("fails to counter!", 10, 320, 20, GREEN);
+				enemy.UpdateHealth(-(player.GetAttackPower() * 2));
+			}
+		}} },
+		{ {HEAVY_ATTACK, HEAL}, {"You strike while " + MainEnemy.GetName() + " heals!", GREEN, [](Player& player , Enemy& enemy) {
+			enemy.UpdateHealth(-(player.GetAttackPower() * 2));
+		}} },
+		{ {HEAVY_ATTACK, HEAVY_ATTACK}, {"Both heavy attacks collide with a massive shockwave!", YELLOW, [](Player& player , Enemy& enemy) {
+			player.UpdateStamina(false, true);
+			enemy.UpdateStamina(false, true);
+		}} },
+		{ {HEAVY_ATTACK, DODGE}, {MainEnemy.GetName() + " dodged your heavy attack!", YELLOW, [](Player& player , Enemy& enemy) {}} },
+		{ {DODGE, ATTACK}, {"You dodged " + MainEnemy.GetName() + "'s  attack", GREEN, [](Player& player , Enemy& enemy) {}} },
+		{ {DODGE, DEFEND}, {"You misread the tell and drain your stamina, " + MainEnemy.GetName() + " recovers!", LIGHTGRAY, [](Player& player , Enemy& enemy) {}} },
+		{ {DODGE, PARRY}, {"You dodge and " + MainEnemy.GetName() + " tries to parry. You both drain stamina!", LIGHTGRAY, [](Player& player , Enemy& enemy) {}} },
+		{ {DODGE, HEAL}, {"You misread the tell and drain your stamina, " + MainEnemy.GetName() + " heals!", YELLOW, [](Player& player , Enemy& enemy) {}} },
+		{ {DODGE, HEAVY_ATTACK}, {"You dodged " + MainEnemy.GetName() + "'s  heavy attack", GREEN, [](Player& player , Enemy& enemy) {}} },
+		{ {DODGE, DODGE}, {"You both dodge and drain stamina!", YELLOW, [](Player& player , Enemy& enemy) {
+			player.UpdateStamina(false, true);
+			enemy.UpdateStamina(false, true);
+		}} }
+	};
 	
-	switch (PlayerAction) {
-	case ATTACK:
-		switch (MainEnemyAction) {
-		case ATTACK:
-			DrawText("Its a clash! The weapons ring as they hit eachother!", 10, 120, 20, YELLOW);
-			break;
-		case DEFEND:
-			DrawText((MainEnemy.GetName() + " blocks your attack!").c_str(), 10, 120, 20, RED);
-			MainEnemy.UpdateHealth(-(MainPlayer.GetAttackPower() / 2));
-			break;
-		case PARRY:
-			DrawText((MainEnemy.GetName() + " parries your attack and ").c_str(), 10, 120, 20, LIGHTGRAY);
-			if (CheckParrySuccess(10 - (RoundNumber + 1), MainEnemy.GetStamina())) {
-				DrawText("counters!", 10, 140, 20, RED);
-				MainPlayer.UpdateHealth(-(MainEnemy.GetAttackPower() * 2));
-			}
-			else {
-				DrawText("fails to counter!", 10, 140, 20, GREEN);
-				MainEnemy.UpdateHealth(-(MainPlayer.GetAttackPower() * 2));
-			}
-			break;
-		case HEAL:
-			DrawText(("You strike while " + MainEnemy.GetName() + " heals!").c_str(), 10, 120, 20, GREEN);
-			MainEnemy.UpdateHealth(-(MainPlayer.GetAttackPower()));
-			break;
-		case HEAVY_ATTACK:
-			DrawText((MainEnemy.GetName() + "'s Heavy Attack overpowers your attack!").c_str(), 10, 120, 20, RED);
-			MainPlayer.UpdateHealth(-(MainEnemy.GetAttackPower() / 2));
-			break;
-		case DODGE:
-			DrawText((MainEnemy.GetName() + " dodges your attack!").c_str(), 10, 120, 20, YELLOW);
-			break;
-		}
-		break;
-	case DEFEND:
-		switch (MainEnemyAction) {
-		case ATTACK:
-			DrawText(("You block " + MainEnemy.GetName() + "'s attack!").c_str(), 10, 120, 20, LIGHTGRAY);
-			MainPlayer.UpdateHealth(-(MainEnemy.GetAttackPower() / 2));
-			break;
-		case DEFEND:
-			DrawText(("You and " + MainEnemy.GetName() + " are recovering Stamina.").c_str(), 10, 120, 20, YELLOW);
-			break;
-		case PARRY:
-			DrawText((MainEnemy.GetName() + " misreads your tell and drains stamina while you recover!").c_str(), 10, 120, 20, GREEN);
-			break;
-		case HEAL:
-			DrawText(("You block while " + MainEnemy.GetName() + " heals.").c_str(), 10, 120, 20, LIGHTGRAY);
-			break;
-		case HEAVY_ATTACK:
-			DrawText((MainEnemy.GetName() + "'s Heavy Attack crushes your defense!").c_str(), 10, 120, 20, RED);
-			MainPlayer.UpdateHealth(-(MainEnemy.GetAttackPower()));
-			break;
-		case DODGE:
-			DrawText((MainEnemy.GetName() + " misread the tell and drains stamina while you recover!").c_str(), 10, 120, 20, GREEN);
-			break;
-		}
-		break;
-	case PARRY:
-		switch (MainEnemyAction) {
-		case ATTACK:
-			DrawText(("You parry " + MainEnemy.GetName() + "'s attack and ").c_str(), 10, 120, 20, LIGHTGRAY);
-			if (CheckParrySuccess(10 - RoundNumber, MainPlayer.GetStamina())) {
-				DrawText("counter!", 10, 140, 20, GREEN);
-				MainEnemy.UpdateHealth(-(MainPlayer.GetAttackPower() * 2));
-			}
-			else {
-				DrawText("fail to counter!", 10, 140, 20, RED);
-				MainPlayer.UpdateHealth(-(MainEnemy.GetAttackPower() * 2));
-			}
-			break;
-		case DEFEND:
-			DrawText(("You misread the tell and drain your stamina, " + MainEnemy.GetName() + " recovers!").c_str(), 10, 120, 20, YELLOW);
-			break;
-		case PARRY:
-			DrawText(("You and " + MainEnemy.GetName() + " both try to parry, and drain stamina!").c_str(), 10, 120, 20, LIGHTGRAY);
-			break;
-		case HEAL:
-			DrawText(("You misread the tell and drain your stamina, " + MainEnemy.GetName() + " heals!").c_str(), 10, 120, 20, YELLOW);
-			break;
-		case HEAVY_ATTACK:
-			DrawText(("You parry " + MainEnemy.GetName() + "'s heavy attack and ").c_str(), 10, 120, 20, LIGHTGRAY);
-			if (CheckParrySuccess(6 - RoundNumber, MainEnemy.GetStamina())) {
-				DrawText("counter!", 10, 140, 20, RED);
-				MainPlayer.UpdateHealth(-(MainEnemy.GetAttackPower() * 2));
-			}
-			else {
-				DrawText("fails to counter!", 10, 140, 20, GREEN);
-				MainEnemy.UpdateHealth(-(MainPlayer.GetAttackPower() * 2));
-			}
-			break;
-		case DODGE:
-			DrawText(("You parry and " + MainEnemy.GetName() + " dodges. You both drain stamina!").c_str(), 10, 120, 20, LIGHTGRAY);
-			break;
-		}
-		
-		break;
-	case HEAL:
-		switch (MainEnemyAction) {
-		case ATTACK:
-				DrawText((MainEnemy.GetName() + " attacks while you heal!").c_str(), 10, 120, 20, RED);
-				MainPlayer.UpdateHealth(-(MainEnemy.GetAttackPower()));
-				break;
-		case DEFEND:
-			DrawText(("You Heal and " + MainEnemy.GetName() + " recover.").c_str(), 10, 120, 20, GREEN);
-			break;
-		case PARRY:
-			DrawText(("You misread the tell and drain your stamina, " + MainEnemy.GetName() + " recovers!").c_str(), 10, 120, 20, YELLOW);
-			break;
-		case HEAL:
-			DrawText("You and the enemy both heal.", 10, 120, 20, LIGHTGRAY);
-			break;
-		case HEAVY_ATTACK:
-			DrawText((MainEnemy.GetName() + "'s Heavy Attack crushes you while you heal!").c_str(), 10, 120, 20, RED);
-			MainPlayer.UpdateHealth(-(MainEnemy.GetAttackPower() * 2));
-			break;
-		case DODGE:
-			DrawText((MainEnemy.GetName() + " misread the tell drains stamina while you heal ").c_str(), 10, 120, 20, GREEN);
-			break;
-		}
-		break;
-	case HEAVY_ATTACK:
-		switch (MainEnemyAction) {
-		case ATTACK:
-			DrawText(("Your heavy attack overpowers the attack of " + MainEnemy.GetName()).c_str(), 10, 120, 20, GREEN);
-			MainEnemy.UpdateHealth(-(MainPlayer.GetAttackPower() / 2));
-			break;
-		case DEFEND:
-			DrawText(("Your heavy attack crushes the defense of " + MainEnemy.GetName()).c_str(), 10, 120, 20, GREEN);
-			MainEnemy.UpdateHealth(-(MainPlayer.GetAttackPower()));
-			break;
-		case PARRY:
-			DrawText((MainEnemy.GetName() + " parries your heavy attack and ").c_str(), 10, 120, 20, LIGHTGRAY);
-			if (CheckParrySuccess(6 - RoundNumber, MainEnemy.GetStamina())) {
-				DrawText("counters!", 10, 140, 20, RED);
-				MainPlayer.UpdateHealth(-(MainEnemy.GetAttackPower() * 2));
-			}
-			else {
-				DrawText("fails to counter!", 10, 140, 20, GREEN);
-				MainEnemy.UpdateHealth(-(MainPlayer.GetAttackPower() * 2));
-			}
-			break;
-		case HEAL:
-			DrawText(("You strike while " + MainEnemy.GetName() + " heals!").c_str(), 10, 120, 20, GREEN);
-			MainEnemy.UpdateHealth(-(MainPlayer.GetAttackPower() * 2));
-			break;
-		case HEAVY_ATTACK:
-			DrawText("Both heavy attacks collide with a massive shockwave!", 10, 120, 20, YELLOW);
-			MainPlayer.UpdateStamina(false, true);
-			MainEnemy.UpdateStamina(false, true);
-			break;
-		case DODGE:
-			DrawText((MainEnemy.GetName() + " dodged your heavy attack!").c_str(), 10, 120, 20, YELLOW);
-			break;
-		}
-		break;
-	case DODGE:
-		switch (MainEnemyAction) {
-		case ATTACK:
-			DrawText(("You dodged " + MainEnemy.GetName() + "'s  attack").c_str(), 10, 120, 20, GREEN);
-			break;
-		case DEFEND:
-			DrawText(("You misread the tell and drain your stamina, " + MainEnemy.GetName() + " recovers!").c_str(), 10, 120, 20, LIGHTGRAY);
-			break;
-		case PARRY:
-			DrawText(("You dodge and " + MainEnemy.GetName() + " tries to parry. You both drain stamina!").c_str(), 10, 120, 20, LIGHTGRAY);
-			break;
-		case HEAL:
-			DrawText(("You misread the tell and drain your stamina, " + MainEnemy.GetName() + " recovers!").c_str(), 10, 120, 20, LIGHTGRAY);
-			break;
-		case HEAVY_ATTACK:
-			DrawText(("You dodged " + MainEnemy.GetName() + "'s  heavy attack").c_str(), 10, 120, 20, GREEN);
-			break;
-		}
-		break;
-	}
+	CombatOutcome outcome = OutcomeMap.at(std::make_pair(PlayerAction, MainEnemyAction));
+	DrawText(outcome.OutcomeText.c_str(), 10, 300, 20, outcome.TextColor);
+	outcome.StatsAdjustments(MainPlayer, MainEnemy);
 }
 
 void FindItem(Player& MainPlayer, Enemy& MainEnemy, int RoundNumber)
@@ -385,7 +379,7 @@ void FindItem(Player& MainPlayer, Enemy& MainEnemy, int RoundNumber)
 	float ItemStaminaIncrease = StaminaDist(Generator);
 
 	InventoryItem NewItem = { ItemName, ItemHealthIncrease, ItemArmorIncrease, ItemStaminaIncrease, ItemPowerIncrease };
-    DrawText((MainEnemy.GetName() + " dropped: " + ItemName + "!").c_str(), 190, 380, 20, DARKGREEN);
+    DrawText((MainEnemy.GetName() + " dropped: " + ItemName + "!").c_str(), 10, 380, 20, YELLOW);
     MainPlayer.AddInventoryItem(NewItem);
 
 }
