@@ -1,5 +1,6 @@
 #include "Player.h"
 #include <iostream>
+#include "CombatLog.h"
 #include "InventoryItem.h"
 #include "raylib.h"
 
@@ -18,10 +19,8 @@ void Player::AddInventoryItem(InventoryItem newItem)
     AttackPower = newAttackPower;
     Stamina = newStamina;
     Armor = newArmor;
-    DrawText(("Equipped: " + newItem.name).c_str(), 400, 420, 20, LIGHTGRAY);
-    DrawText(("STATS \nHealthIncr: " + std::to_string(newItem.healthIncrease / 100)).c_str(), 400, 440, 20,LIGHTGRAY);
-    DrawText(("AttackIncr: " + std::to_string(newItem.attackIncrease / 100)).c_str(), 400, 480, 20,LIGHTGRAY);
-    DrawText(("StaminaIncr: " + std::to_string(newItem.staminaIncrease / 100)).c_str(), 400, 500, 20,LIGHTGRAY);
-    DrawText(("ArmorIncr: " + std::to_string(newItem.armorIncrease / 100)).c_str(), 400, 520, 20,LIGHTGRAY);
+	CombatLog::AddMessage(("Equipped: " + newItem.name), LIGHTGRAY, 1.5f);
+	CombatLog::AddMessage(("STATS(H: " + std::to_string(newItem.healthIncrease / 100) + ", ATK: " + std::to_string(newItem.attackIncrease / 100)).c_str(), LIGHTGRAY, 1.5f);
+    CombatLog::AddMessage(("S: " + std::to_string(newItem.staminaIncrease / 100) + ", ARM: " + std::to_string(newItem.armorIncrease / 100) + ")").c_str(), LIGHTGRAY, 1.5f);
     items.push_back(newItem);
 }

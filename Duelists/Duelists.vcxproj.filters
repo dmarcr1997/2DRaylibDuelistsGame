@@ -42,7 +42,7 @@
     <ClCompile Include="Enemy.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Log.cpp">
+    <ClCompile Include="CombatLog.cpp">
       <Filter>Source Files\Log</Filter>
     </ClCompile>
   </ItemGroup>
@@ -56,7 +56,7 @@
     <ClInclude Include="Enemy.h">
       <Filter>Header Files\Characters</Filter>
     </ClInclude>
-    <ClInclude Include="Log.h">
+    <ClInclude Include="CombatLog.h">
       <Filter>Header Files\Log</Filter>
     </ClInclude>
     <ClInclude Include="InventoryItem.h">

@@ -1,5 +1,5 @@
 #include "Character.h"
-#include "Log.h"
+#include "CombatLog.h"
 #include "raylib.h"
 
 Character::Character(int health, int attack, int armor, int stamina, std::string name)

@@ -129,14 +129,14 @@
     <ClCompile Include="Character.cpp" />
     <ClCompile Include="Duelists.cpp" />
     <ClCompile Include="Enemy.cpp" />
-    <ClCompile Include="Log.cpp" />
+    <ClCompile Include="CombatLog.cpp" />
     <ClCompile Include="Player.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Character.h" />
     <ClInclude Include="Enemy.h" />
     <ClInclude Include="InventoryItem.h" />
-    <ClInclude Include="Log.h" />
+    <ClInclude Include="CombatLog.h" />
     <ClInclude Include="Player.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

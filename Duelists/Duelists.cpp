@@ -1,22 +1,23 @@
-// Duelists.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
-
 #include <iostream>
 #include <random>
 #include <map>
 #include <functional>
 #include "Player.h"
 #include "Enemy.h"
-#include "Log.h"
+#include "CombatLog.h"
 #include "InventoryItem.h"
 #include "raylib.h"
+
+float SHORT_MESSAGE_DURATION = 3.0f;
+float LONG_MESSAGE_DURATION = 6.0f;
+bool CAN_INPUT = true;
+float INPUT_COOLDOWN = 3.0f;
+float TIME_SINCE_LAST_INPUT = 0.0f;
 
 enum GameState {
 	WAITING_FOR_INPUT,
 	PROCESSING,
 	GAME_OVER,
-	INFO,
-	LOOT
 };
 
 struct CombatOutcome
@@ -28,10 +29,10 @@ struct CombatOutcome
 
 bool CheckParrySuccess(int difficulty, int stamina);
 void ProcessOutcome(Player& MainPlayer, Enemy& MainEnemy, Action PlayerAction, int RoundNumber);
-void DrawOutcome(Player& MainPlayer, Enemy& MainEnemy, Action& PlayerAction, GameState& State, GameState& StateBuffer, int& RoundNumber, int& WaitDuration);
-void DrawLootOutcome(Enemy& MainEnemy, int& RoundNumber, Player& MainPlayer, GameState& State, GameState& StateBuffer);
+void DrawOutcome(Player& MainPlayer, Enemy& MainEnemy, Action& PlayerAction, GameState& State, int& RoundNumber, int& WaitDuration);
+void DrawLootOutcome(Enemy& MainEnemy, int& RoundNumber, Player& MainPlayer, GameState& State);
 void FindItem(Player& MainPlayer, Enemy& MainEnemy, int RoundNumber);
-void DrawWaitForInput(Action& PlayerAction, GameState& State, Player& MainPlayer, GameState& StateBuffer);
+void DrawWaitForInput(Action& PlayerAction, GameState& State, Player& MainPlayer);
 void DrawFirstFrame(Texture2D texture, int posX, int posY, bool flipped);
 
 
@@ -56,23 +57,18 @@ int main()
 	int RoundNumber = 1;
 	int WaitDuration = 3;
 	GameState State = WAITING_FOR_INPUT;
-	GameState StateBuffer = WAITING_FOR_INPUT;
 
 	Action PlayerAction = NONE;
 
 	while (!WindowShouldClose()) {
-		if (State == INFO) {
-			WaitTime(WaitDuration);
-			State = StateBuffer;
-			WaitDuration = 3;
-		}
-
-
+		TIME_SINCE_LAST_INPUT += GetFrameTime();
 		BeginDrawing();
 		ClearBackground(BLACK);
 		DrawTexture(Background, 0, 0, WHITE);
 		DrawFirstFrame(PlayerTexture, 100, 100, false);
 		DrawFirstFrame(EnemyTexture, 600, 100, true);
+
+		CombatLog::DrawMessage();
 		
 		if (State == GAME_OVER) {
 			DrawText("Thanks for playing!\n", 190, 200, 20, GREEN);
@@ -83,17 +79,12 @@ int main()
 
 		
 		std::string RoundMessage = "ROUND " + std::to_string(RoundNumber) + "\t|\tHEALTH: " + std::to_string(MainPlayer.GetHealth()) + "\t|\tSTAMINA: " + std::to_string(MainPlayer.GetStamina());
-		DrawText(RoundMessage.c_str(), 10, 400, 20, LIGHTGRAY);
-		if (State == LOOT) {
-			DrawLootOutcome(MainEnemy, RoundNumber, MainPlayer, State, StateBuffer);
-			State = INFO;
-			EndDrawing();
-			continue;
-		}
+		DrawText(RoundMessage.c_str(), 10, 10, 20, WHITE);
+		
 		if (State == WAITING_FOR_INPUT) {
-			DrawWaitForInput(PlayerAction, State, MainPlayer, StateBuffer);
+			DrawWaitForInput(PlayerAction, State, MainPlayer);
 		} else if(State == PROCESSING) {
-			DrawOutcome(MainPlayer, MainEnemy, PlayerAction, State, StateBuffer, RoundNumber, WaitDuration);
+			DrawOutcome(MainPlayer, MainEnemy, PlayerAction, State, RoundNumber, WaitDuration);
 		}
 
 		EndDrawing();
@@ -115,63 +106,89 @@ void DrawFirstFrame(Texture2D texture, int posX, int posY, bool flipped) {
     DrawTextureRec(texture, sourceRec, position, WHITE);
 }
 
-void DrawWaitForInput(Action& PlayerAction, GameState& State, Player& MainPlayer, GameState& StateBuffer)
+void DrawWaitForInput(Action& PlayerAction, GameState& State, Player& MainPlayer)
 {
-	DrawText("Choose an Action - \n(1. Attack, 2. Parry, 3. Defend, 4. Heal, 5. Heavy Attack, 6. Dodge)", 10, 420, 20, GREEN);
-	switch (GetKeyPressed())
-	{
-	case KEY_ONE:
-		PlayerAction = ATTACK;
-		State = PROCESSING;
-		break;
-	case KEY_TWO:
-		if (MainPlayer.GetStamina() > 0) {
-			MainPlayer.UpdateStamina(false);
-			PlayerAction = PARRY;
+	if (State != WAITING_FOR_INPUT) return;
+
+	DrawText("Choose an Action - \n(1. Attack, 2. Parry, 3. Defend, 4. Heal, 5. Heavy Attack, 6. Dodge)", 10, 30, 20, LIGHTGRAY);
+	if (CAN_INPUT) {
+		switch (GetKeyPressed())
+		{
+		case KEY_ONE:
+			PlayerAction = ATTACK;
 			State = PROCESSING;
-		}
-		else {
-			DrawText("You are Exhausted: You cannot Parry until you Defend(3)", 10, 300, 20, RED);
-			State = INFO;
-			StateBuffer = WAITING_FOR_INPUT;
-		}
-		break;
-	case KEY_THREE:
-		MainPlayer.UpdateStamina(true);
-		PlayerAction = DEFEND;
-		State = PROCESSING;
-		break;
-	case KEY_FOUR:
-		MainPlayer.UpdateHealth(MainPlayer.GetHealth() / 2);
-		PlayerAction = HEAL;
-		State = PROCESSING;
-		break;
-	case KEY_FIVE:
-		if (MainPlayer.GetStamina() > 0) {
-			MainPlayer.UpdateStamina(false);
-			PlayerAction = HEAVY_ATTACK;
+			CAN_INPUT = false;
+			TIME_SINCE_LAST_INPUT = 0.0f;
+			break;
+		case KEY_TWO:
+			if (MainPlayer.GetStamina() > 0) {
+				MainPlayer.UpdateStamina(false);
+				PlayerAction = PARRY;
+				State = PROCESSING;
+				CAN_INPUT = false;	
+				TIME_SINCE_LAST_INPUT = 0.0f;
+			}
+			else {
+				CombatLog::AddMessage("You are Exhausted : You cannot Parry until you Defend(3)", RED, SHORT_MESSAGE_DURATION);
+				//DrawText("You are Exhausted: You cannot Parry until you Defend(3)", 10, 300, 20, RED);
+				State = WAITING_FOR_INPUT;
+				CAN_INPUT = false;
+				TIME_SINCE_LAST_INPUT = 0.0f;
+			}
+			break;
+		case KEY_THREE:
+			MainPlayer.UpdateStamina(true);
+			PlayerAction = DEFEND;
 			State = PROCESSING;
-		}
-		else {
-			DrawText("You are Exhausted: You cannot do that until you Defend(3)", 10, 300, 20, RED);
-			State = INFO;
-			StateBuffer = WAITING_FOR_INPUT;
-		}
-		break;
-	case KEY_SIX:
-		if (MainPlayer.GetStamina() > 0) {
-			MainPlayer.UpdateStamina(false, true);
-			PlayerAction = DODGE;
+			CAN_INPUT = false;
+			TIME_SINCE_LAST_INPUT = 0.0f;
+			break;
+		case KEY_FOUR:
+			MainPlayer.UpdateHealth(MainPlayer.GetHealth() / 2);
+			PlayerAction = HEAL;
 			State = PROCESSING;
+			CAN_INPUT = false;
+			TIME_SINCE_LAST_INPUT = 0.0f;
+			break;
+		case KEY_FIVE:
+			if (MainPlayer.GetStamina() > 0) {
+				MainPlayer.UpdateStamina(false);
+				PlayerAction = HEAVY_ATTACK;
+				State = PROCESSING;
+				CAN_INPUT = false;	
+				TIME_SINCE_LAST_INPUT = 0.0f;
+			}
+			else {
+
+				CombatLog::AddMessage("You are Exhausted : You cannot Heavy Attack until you Defend(3)", RED, SHORT_MESSAGE_DURATION);
+				//DrawText("You are Exhausted: You cannot do that until you Defend(3)", 10, 300, 20, RED);
+				State = WAITING_FOR_INPUT;
+				CAN_INPUT = false;	
+				TIME_SINCE_LAST_INPUT = 0.0f;
+			}
+			break;
+		case KEY_SIX:
+			if (MainPlayer.GetStamina() > 0) {
+				MainPlayer.UpdateStamina(false, true);
+				PlayerAction = DODGE;
+				State = PROCESSING;
+				CAN_INPUT = false;	
+				TIME_SINCE_LAST_INPUT = 0.0f;
+			}
+			else {
+
+				CombatLog::AddMessage("You are Exhausted : You cannot Dodge until you Defend(3)", RED, SHORT_MESSAGE_DURATION);
+				//DrawText("You are Exhausted: You cannot do that until you Defend(3)", 10, 300, 20, RED);
+				State = WAITING_FOR_INPUT;
+				TIME_SINCE_LAST_INPUT = 0.0f;
+			}
+			break;
+		default:
+			break;
 		}
-		else {
-			DrawText("You are Exhausted: You cannot do that until you Defend(3)", 10, 300, 20, RED);
-			State = INFO;
-			StateBuffer = WAITING_FOR_INPUT;
-		}
-		break;
-	default:
-		break;
+	}
+	if(TIME_SINCE_LAST_INPUT > INPUT_COOLDOWN) {
+		CAN_INPUT = true;
 	}
 }
 
@@ -187,43 +204,42 @@ bool CheckParrySuccess(int difficulty, int stamina)
 	return Roll <= successChance;
 }
 
-void DrawOutcome(Player& MainPlayer, Enemy& MainEnemy, Action& PlayerAction, GameState& State, GameState& StateBuffer, int& RoundNumber, int& WaitDuration)
+void DrawOutcome(Player& MainPlayer, Enemy& MainEnemy, Action& PlayerAction, GameState& State, int& RoundNumber, int& WaitDuration)
 {
 	ProcessOutcome(MainPlayer, MainEnemy, PlayerAction, RoundNumber);
-	StateBuffer = WAITING_FOR_INPUT;
-
+	State = WAITING_FOR_INPUT;
 	if (!MainEnemy.IsAlive()) {
-		State = LOOT;
+		DrawLootOutcome(MainEnemy, RoundNumber, MainPlayer, State);
 		return;
 	}
 
 	if (!MainPlayer.IsAlive()) {
-		DrawText("You have been defeated! Game Over!\n", 400, 300, 20, RED);
-		StateBuffer = GAME_OVER;
+		CombatLog::AddMessage("You have been defeated! Game Over!", RED, 3.0f);
+		//DrawText("You have been defeated! Game Over!\n", 400, 300, 20, RED);
+		State = GAME_OVER;
 	}
-	State = INFO;
 }
 
-void DrawLootOutcome(Enemy& MainEnemy, int& RoundNumber, Player& MainPlayer, GameState& State, GameState& StateBuffer)
+void DrawLootOutcome(Enemy& MainEnemy, int& RoundNumber, Player& MainPlayer, GameState& State)
 {
 	std::string EnemyDefeatMessage = "You have defeated " + MainEnemy.GetName() + "!";
-	DrawText(EnemyDefeatMessage.c_str(), 10, 10, 20, GREEN);
+	CombatLog::AddMessage(EnemyDefeatMessage, GREEN, LONG_MESSAGE_DURATION);
 	RoundNumber++;
 	FindItem(MainPlayer, MainEnemy, RoundNumber);
 	if (RoundNumber > 5) {
-		DrawText("You have defeated all enemies! You win!", 400, 300, 60, GREEN);
-		StateBuffer = GAME_OVER;
+		CombatLog::AddMessage("You have defeated all enemies! You win!", GREEN, LONG_MESSAGE_DURATION);
+		State = GAME_OVER;
 	}
 	else {
 		MainEnemy.IncreaseDifficulty(RoundNumber);
 
 		MainPlayer.ResetStats();
-		DrawText("You recover your stamina and energy for the next fight!", 10, 40, 20, LIGHTGRAY);
+		CombatLog::AddMessage("You recover your stamina and energy for the next fight!", LIGHTGRAY, LONG_MESSAGE_DURATION);
 
-		DrawText(("Now facing: " + MainEnemy.GetName() +
+		CombatLog::AddMessage(("Now facing: " + MainEnemy.GetName() +
 			" (Health: " + std::to_string(MainEnemy.GetHealth()) +
-			", Attack: " + std::to_string(MainEnemy.GetAttackPower()) + ")\n").c_str(), 400, 80, 20, LIGHTGRAY);
-		StateBuffer = WAITING_FOR_INPUT;
+			", Attack: " + std::to_string(MainEnemy.GetAttackPower()) + ")\n").c_str(), LIGHTGRAY, LONG_MESSAGE_DURATION);
+		State = WAITING_FOR_INPUT;
 	}
 }
 
@@ -246,7 +262,8 @@ void ProcessOutcome(Player& MainPlayer, Enemy& MainEnemy, Action PlayerAction, i
 	std::string PlayerActionStr = GetActionString(PlayerAction);
 	std::string MainEnemyActionStr = GetActionString(MainEnemyAction);
 	
-	DrawText(("Player " + PlayerActionStr + "s \t | \t" + "Enemy " + MainEnemyActionStr + "s").c_str(),  10, 10, 20, LIGHTGRAY);
+	CombatLog::AddMessage(("Player " + PlayerActionStr + "s \t | \t" + "Enemy " + MainEnemyActionStr + "s"), LIGHTGRAY, SHORT_MESSAGE_DURATION);
+	//DrawText(("Player " + PlayerActionStr + "s \t | \t" + "Enemy " + MainEnemyActionStr + "s").c_str(),  10, 10, 20, LIGHTGRAY);
 
 	const std::map<std::pair<Action, Action>, CombatOutcome> OutcomeMap = {
 		{ {ATTACK, ATTACK}, {"Its a clash! The weapons ring as they hit eachother!", DARKGRAY, [](Player& player , Enemy& enemy) {}}},
@@ -350,7 +367,8 @@ void ProcessOutcome(Player& MainPlayer, Enemy& MainEnemy, Action PlayerAction, i
 	};
 	
 	CombatOutcome outcome = OutcomeMap.at(std::make_pair(PlayerAction, MainEnemyAction));
-	DrawText(outcome.OutcomeText.c_str(), 10, 300, 20, outcome.TextColor);
+	CombatLog::AddMessage(outcome.OutcomeText, outcome.TextColor, SHORT_MESSAGE_DURATION);
+	//DrawText(outcome.OutcomeText.c_str(), 10, 300, 20, outcome.TextColor);
 	outcome.StatsAdjustments(MainPlayer, MainEnemy);
 }
 
@@ -381,5 +399,4 @@ void FindItem(Player& MainPlayer, Enemy& MainEnemy, int RoundNumber)
 	InventoryItem NewItem = { ItemName, ItemHealthIncrease, ItemArmorIncrease, ItemStaminaIncrease, ItemPowerIncrease };
     DrawText((MainEnemy.GetName() + " dropped: " + ItemName + "!").c_str(), 10, 380, 20, YELLOW);
     MainPlayer.AddInventoryItem(NewItem);
-
 }

@@ -1,43 +1,43 @@
 ﻿  Duelists.cpp
+C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(45,13): warning C4244: 'argument': conversion from 'const float' to 'int', possible loss of data
 C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(44,13): warning C4244: 'argument': conversion from 'const float' to 'int', possible loss of data
-C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(43,13): warning C4244: 'argument': conversion from 'const float' to 'int', possible loss of data
-C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(367,74): warning C4267: 'argument': conversion from 'size_t' to '_Ty', possible loss of data
+C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(385,74): warning C4267: 'argument': conversion from 'size_t' to '_Ty', possible loss of data
           with
           [
               _Ty=int
           ]
-C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(368,81): warning C4267: 'argument': conversion from 'size_t' to '_Ty', possible loss of data
+C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(386,81): warning C4267: 'argument': conversion from 'size_t' to '_Ty', possible loss of data
           with
           [
               _Ty=int
           ]
-C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(369,45): warning C4244: 'argument': conversion from 'double' to '_Ty', possible loss of data
+C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(387,45): warning C4244: 'argument': conversion from 'double' to '_Ty', possible loss of data
           with
           [
               _Ty=int
           ]
-C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(370,44): warning C4244: 'argument': conversion from 'double' to '_Ty', possible loss of data
+C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(388,44): warning C4244: 'argument': conversion from 'double' to '_Ty', possible loss of data
           with
           [
               _Ty=int
           ]
-C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(371,45): warning C4244: 'argument': conversion from 'double' to '_Ty', possible loss of data
+C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(389,45): warning C4244: 'argument': conversion from 'double' to '_Ty', possible loss of data
           with
           [
               _Ty=int
           ]
-C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(372,46): warning C4244: 'argument': conversion from 'double' to '_Ty', possible loss of data
+C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(390,46): warning C4244: 'argument': conversion from 'double' to '_Ty', possible loss of data
           with
           [
               _Ty=int
           ]
-C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(376,26): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
-C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(377,27): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
-C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(378,26): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
-C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(379,28): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
+C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(394,26): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
+C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(395,27): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
+C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(396,26): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
+C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(397,28): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
   Generating code
-  17 of 1048 functions ( 1.6%) were compiled, the rest were copied from previous compilation.
+  2 of 1096 functions ( 0.2%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
-    1 functions had inline decision re-evaluated but remain unchanged
+    0 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   Duelists.vcxproj -> C:\Users\mossy\Documents\Vertex\Duelists\x64\Release\Duelists.exe
