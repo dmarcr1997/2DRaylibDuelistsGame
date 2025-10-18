@@ -47,13 +47,37 @@ int main()
 	);
 
 	Texture2D Background = LoadTexture("../SourceArt/Arena.png");
-	Texture2D PlayerTexture = LoadTexture("../SourceArt/Characters/Knight/Knight_IdleBlinking_Sprite.png");
-	Texture2D EnemyTexture = LoadTexture("../SourceArt/Characters/Goblin/Goblin_IdleBlinking_Sprite.png"); 
+	
+	int FramesCounter = 0;
+	int CurrentFrame = 0;
+	int FramesSpeed = 6;
+
 	SetTargetFPS(60);
 
-	//Game init
+	//Player init
 	Player MainPlayer(5, 2, 10, 2, "Hero");
+	MainPlayer.AddTextureSprite("../SourceArt/Characters/Knight/Knight_IdleBlinking_Sprite.png");
+	MainPlayer.AddTextureSprite("../SourceArt/Characters/Knight/Knight_Attack_Sprite.png");
+	MainPlayer.AddTextureSprite("../SourceArt/Characters/Knight/Knight_Defend_Sprite.png");
+	MainPlayer.AddTextureSprite("../SourceArt/Characters/Knight/Knight_Parry_Sprite.png");
+
+	//Player Sprite Testing
+	Vector2 PlayerPosition = { 75.0f, 150.0f };
+	Rectangle PlayerRect = { 0.0f, 0.0f, static_cast<float>(MainPlayer.GetCurrentTexture().width / 4), static_cast<float>(MainPlayer.GetCurrentTexture().height / 3)};
+
+
+	//Enemy init
 	Enemy MainEnemy(1, 1, 0, 1, "Goblin");
+	MainEnemy.AddTextureSprite("../SourceArt/Characters/Goblin/Goblin_IdleBlinking_Sprite.png");
+	MainEnemy.AddTextureSprite("../SourceArt/Characters/Goblin/Goblin_Attack_Sprite.png");
+	MainEnemy.AddTextureSprite("../SourceArt/Characters/Goblin/Goblin_Defend_Sprite.png");
+	MainEnemy.AddTextureSprite("../SourceArt/Characters/Goblin/Goblin_Parry_Sprite.png");
+
+	//Player Sprite 
+	Vector2 EnemyPosition = { 600.0f, 150.0f };
+	Rectangle EnemyRect = { 0.0f, 0.0f, static_cast<float>(MainEnemy.GetCurrentTexture().width / 4), static_cast<float>(MainEnemy.GetCurrentTexture().height / 3) };
+	EnemyRect.width = -EnemyRect.width;
+
 	int RoundNumber = 1;
 	int WaitDuration = 3;
 	GameState State = WAITING_FOR_INPUT;
@@ -61,12 +85,29 @@ int main()
 	Action PlayerAction = NONE;
 
 	while (!WindowShouldClose()) {
+		FramesCounter++;
 		TIME_SINCE_LAST_INPUT += GetFrameTime();
+
+		if (FramesCounter >= (60 / FramesSpeed)) {
+			FramesCounter = 0;
+			CurrentFrame++;
+			if (CurrentFrame > 3)
+			{
+				CurrentFrame = 0;
+
+			}
+			PlayerRect.x = static_cast<float>(CurrentFrame) *MainPlayer.GetCurrentTexture().width / 4;
+			PlayerRect.y = static_cast<float>(CurrentFrame) *MainPlayer.GetCurrentTexture().height / 3;
+
+			EnemyRect.x = static_cast<float>(CurrentFrame) * MainEnemy.GetCurrentTexture().width / 4;
+			EnemyRect.y = static_cast<float>(CurrentFrame) * MainEnemy.GetCurrentTexture().height / 3;
+
+		}
 		BeginDrawing();
 		ClearBackground(BLACK);
 		DrawTexture(Background, 0, 0, WHITE);
-		DrawFirstFrame(PlayerTexture, 100, 100, false);
-		DrawFirstFrame(EnemyTexture, 600, 100, true);
+		DrawTextureRec(MainPlayer.GetCurrentTexture(), PlayerRect, PlayerPosition, WHITE);
+		DrawTextureRec(MainEnemy.GetCurrentTexture(), EnemyRect, EnemyPosition, WHITE);
 
 		CombatLog::DrawMessage();
 		
@@ -90,6 +131,8 @@ int main()
 		EndDrawing();
 	}
 	UnloadTexture(Background);
+	MainPlayer.UnloadAllTextures();
+	MainEnemy.UnloadAllTextures();
 	return 0;
 }
 
@@ -119,6 +162,7 @@ void DrawWaitForInput(Action& PlayerAction, GameState& State, Player& MainPlayer
 			State = PROCESSING;
 			CAN_INPUT = false;
 			TIME_SINCE_LAST_INPUT = 0.0f;
+			MainPlayer.Sprites.CurrentSprite = 1;
 			break;
 		case KEY_TWO:
 			if (MainPlayer.GetStamina() > 0) {
@@ -127,6 +171,8 @@ void DrawWaitForInput(Action& PlayerAction, GameState& State, Player& MainPlayer
 				State = PROCESSING;
 				CAN_INPUT = false;	
 				TIME_SINCE_LAST_INPUT = 0.0f;
+
+				MainPlayer.Sprites.CurrentSprite = 3;
 			}
 			else {
 				CombatLog::AddMessage("You are Exhausted : You cannot Parry until you Defend(3)", RED, SHORT_MESSAGE_DURATION);
@@ -142,6 +188,8 @@ void DrawWaitForInput(Action& PlayerAction, GameState& State, Player& MainPlayer
 			State = PROCESSING;
 			CAN_INPUT = false;
 			TIME_SINCE_LAST_INPUT = 0.0f;
+
+			MainPlayer.Sprites.CurrentSprite = 2;
 			break;
 		case KEY_FOUR:
 			MainPlayer.UpdateHealth(MainPlayer.GetHealth() / 2);
@@ -149,6 +197,8 @@ void DrawWaitForInput(Action& PlayerAction, GameState& State, Player& MainPlayer
 			State = PROCESSING;
 			CAN_INPUT = false;
 			TIME_SINCE_LAST_INPUT = 0.0f;
+
+			MainPlayer.Sprites.CurrentSprite = 2;
 			break;
 		case KEY_FIVE:
 			if (MainPlayer.GetStamina() > 0) {
@@ -157,6 +207,8 @@ void DrawWaitForInput(Action& PlayerAction, GameState& State, Player& MainPlayer
 				State = PROCESSING;
 				CAN_INPUT = false;	
 				TIME_SINCE_LAST_INPUT = 0.0f;
+
+				MainPlayer.Sprites.CurrentSprite = 1;
 			}
 			else {
 
@@ -174,6 +226,8 @@ void DrawWaitForInput(Action& PlayerAction, GameState& State, Player& MainPlayer
 				State = PROCESSING;
 				CAN_INPUT = false;	
 				TIME_SINCE_LAST_INPUT = 0.0f;
+
+				//DODGE HANDLE (MOVE PLAYER SPRITE)
 			}
 			else {
 
@@ -217,6 +271,10 @@ void DrawOutcome(Player& MainPlayer, Enemy& MainEnemy, Action& PlayerAction, Gam
 		CombatLog::AddMessage("You have been defeated! Game Over!", RED, 3.0f);
 		//DrawText("You have been defeated! Game Over!\n", 400, 300, 20, RED);
 		State = GAME_OVER;
+	}
+	if (State == WAITING_FOR_INPUT) {
+		MainPlayer.Sprites.CurrentSprite = 0;
+		MainEnemy.Sprites.CurrentSprite = 0;
 	}
 }
 

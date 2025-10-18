@@ -1,6 +1,5 @@
 #include "Character.h"
 #include "CombatLog.h"
-#include "raylib.h"
 
 Character::Character(int health, int attack, int armor, int stamina, std::string name)
 	: MaxHealth(health), AttackPower(attack), Armor(armor), MaxStamina(stamina), Name(name)
@@ -40,22 +39,41 @@ Action Character::GetActionFromInput(int Input)
 {
 	switch (Input) {
 	case 0:
+		Sprites.CurrentSprite = 1;
 		return ATTACK;
 	case 1:
 		UpdateStamina(false);
+		Sprites.CurrentSprite = 3;
 		return PARRY;
 	case 2:
 		UpdateStamina(true);
+		Sprites.CurrentSprite = 2;
 		return DEFEND;
 	case 3:
 		UpdateHealth(MaxHealth / 2);
+		Sprites.CurrentSprite = 2;
 		return HEAL;
 	case 4:
+		Sprites.CurrentSprite = 1;
 		return HEAVY_ATTACK;
 	case 5:	
+		//DODGE HANDLER
 		UpdateStamina(false, true);
 		return DODGE;
 	default:
 		return NONE;
 	}
+}
+
+void Character::AddTextureSprite(const char* TexturePath)
+{
+	Sprites.TextureArray.push_back(LoadTexture(TexturePath));
+}
+
+void Character::UnloadAllTextures()
+{
+	for (Texture2D& Texture : Sprites.TextureArray) {
+		UnloadTexture(Texture);
+	}
+	Sprites.TextureArray.clear();
 }

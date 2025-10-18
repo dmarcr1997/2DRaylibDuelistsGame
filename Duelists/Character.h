@@ -1,6 +1,13 @@
 #pragma once
 #include <string>
 #include <iostream>
+#include <vector>
+#include "raylib.h"
+
+struct SpriteComponent {
+	std::vector<Texture2D> TextureArray;
+	int CurrentSprite = 0;
+};
 
 enum Action {
 	ATTACK,
@@ -18,14 +25,18 @@ public:
 	int GetHealth() const { return Health; }
 	int GetAttackPower() const { return AttackPower; }
 	int GetStamina() const { return Stamina;  }
+	std::string GetName() const { return Name; }
 	void UpdateHealth(int Amount);
 	void UpdateStamina(bool Increase, bool Heavy=false);
 	bool IsAlive() const { return Health > 0; }
 	void ResetStats();
 	virtual Action ChooseAction() = 0;
 	Action GetActionFromInput(int Input);
-	std::string GetName() const { return Name; }
 
+	SpriteComponent Sprites;
+	void AddTextureSprite(const char* TexturePath);
+	void UnloadAllTextures();
+	Texture2D GetCurrentTexture() const { return Sprites.TextureArray[Sprites.CurrentSprite]; }
 protected:
 	std::string Name;
 	int MaxHealth;
