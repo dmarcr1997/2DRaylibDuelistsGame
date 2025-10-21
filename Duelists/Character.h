@@ -35,8 +35,9 @@ public:
 
 	SpriteComponent Sprites;
 	void AddTextureSprite(const char* TexturePath);
+	void SwapTextureSet(const std::vector<const char*>& NewTextures);
 	void UnloadAllTextures();
-	Texture2D GetCurrentTexture() const { return Sprites.TextureArray[Sprites.CurrentSprite]; }
+	Texture2D GetCurrentTexture();
 protected:
 	std::string Name;
 	int MaxHealth;

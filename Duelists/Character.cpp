@@ -70,10 +70,31 @@ void Character::AddTextureSprite(const char* TexturePath)
 	Sprites.TextureArray.push_back(LoadTexture(TexturePath));
 }
 
+void Character::SwapTextureSet(const std::vector<const char*>& NewTextures)
+{
+	std::vector<Texture2D> TempTextureArray;
+	for(const char* TexturePath : NewTextures) {
+		TempTextureArray.push_back(LoadTexture(TexturePath));
+	}
+	UnloadAllTextures();
+	Sprites.TextureArray = std::move(TempTextureArray);
+	Sprites.CurrentSprite = 0;
+}
+
 void Character::UnloadAllTextures()
 {
 	for (Texture2D& Texture : Sprites.TextureArray) {
-		UnloadTexture(Texture);
+		if (Texture.id > 0) {
+			UnloadTexture(Texture);
+		}
 	}
 	Sprites.TextureArray.clear();
+}
+
+Texture2D Character::GetCurrentTexture()
+{
+	if (!Sprites.TextureArray.empty() && Sprites.CurrentSprite < Sprites.TextureArray.size()) {
+		return Sprites.TextureArray[Sprites.CurrentSprite];
+	}
+	return Texture2D{};
 }

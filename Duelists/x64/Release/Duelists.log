@@ -1,43 +1,7 @@
-﻿  Duelists.cpp
-C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(45,13): warning C4244: 'argument': conversion from 'const float' to 'int', possible loss of data
-C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(44,13): warning C4244: 'argument': conversion from 'const float' to 'int', possible loss of data
-C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(443,74): warning C4267: 'argument': conversion from 'size_t' to '_Ty', possible loss of data
-          with
-          [
-              _Ty=int
-          ]
-C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(444,81): warning C4267: 'argument': conversion from 'size_t' to '_Ty', possible loss of data
-          with
-          [
-              _Ty=int
-          ]
-C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(445,45): warning C4244: 'argument': conversion from 'double' to '_Ty', possible loss of data
-          with
-          [
-              _Ty=int
-          ]
-C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(446,44): warning C4244: 'argument': conversion from 'double' to '_Ty', possible loss of data
-          with
-          [
-              _Ty=int
-          ]
-C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(447,45): warning C4244: 'argument': conversion from 'double' to '_Ty', possible loss of data
-          with
-          [
-              _Ty=int
-          ]
-C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(448,46): warning C4244: 'argument': conversion from 'double' to '_Ty', possible loss of data
-          with
-          [
-              _Ty=int
-          ]
-C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(452,26): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
-C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(453,27): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
-C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(454,26): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
-C:\Users\mossy\Documents\Vertex\Duelists\Duelists\Duelists.cpp(455,28): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
+﻿  Enemy.cpp
   Generating code
-  1 of 1146 functions (<0.1%) were compiled, the rest were copied from previous compilation.
+  2 of 1299 functions ( 0.2%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
-    1 functions had inline decision re-evaluated but remain unchanged
+    2 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   Duelists.vcxproj -> C:\Users\mossy\Documents\Vertex\Duelists\x64\Release\Duelists.exe

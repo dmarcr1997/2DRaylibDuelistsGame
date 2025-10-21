@@ -57,24 +57,21 @@ int main()
 	//Player init
 	Player MainPlayer(5, 2, 10, 2, "Hero");
 	MainPlayer.AddTextureSprite("../SourceArt/Characters/Knight/Knight_IdleBlinking_Sprite.png");
-	MainPlayer.AddTextureSprite("../SourceArt/Characters/Knight/Knight_Attack_Sprite.png");
+	MainPlayer.AddTextureSprite("../SourceArt/Characters/Knight/Knight_Attacking_Sprite.png");
 	MainPlayer.AddTextureSprite("../SourceArt/Characters/Knight/Knight_Defend_Sprite.png");
 	MainPlayer.AddTextureSprite("../SourceArt/Characters/Knight/Knight_Parry_Sprite.png");
 
 	//Player Sprite Testing
-	Vector2 PlayerPosition = { 75.0f, 150.0f };
+	Vector2 PlayerPosition = { 250.0f, 150.0f };
 	Rectangle PlayerRect = { 0.0f, 0.0f, static_cast<float>(MainPlayer.GetCurrentTexture().width / 4), static_cast<float>(MainPlayer.GetCurrentTexture().height / 3)};
 
 
 	//Enemy init
 	Enemy MainEnemy(1, 1, 0, 1, "Goblin");
-	MainEnemy.AddTextureSprite("../SourceArt/Characters/Goblin/Goblin_IdleBlinking_Sprite.png");
-	MainEnemy.AddTextureSprite("../SourceArt/Characters/Goblin/Goblin_Attack_Sprite.png");
-	MainEnemy.AddTextureSprite("../SourceArt/Characters/Goblin/Goblin_Defend_Sprite.png");
-	MainEnemy.AddTextureSprite("../SourceArt/Characters/Goblin/Goblin_Parry_Sprite.png");
+	MainEnemy.IncreaseDifficulty(1);
 
 	//Player Sprite 
-	Vector2 EnemyPosition = { 600.0f, 150.0f };
+	Vector2 EnemyPosition = {350.0f, 160.0f };
 	Rectangle EnemyRect = { 0.0f, 0.0f, static_cast<float>(MainEnemy.GetCurrentTexture().width / 4), static_cast<float>(MainEnemy.GetCurrentTexture().height / 3) };
 	EnemyRect.width = -EnemyRect.width;
 
@@ -126,6 +123,11 @@ int main()
 			DrawWaitForInput(PlayerAction, State, MainPlayer);
 		} else if(State == PROCESSING) {
 			DrawOutcome(MainPlayer, MainEnemy, PlayerAction, State, RoundNumber, WaitDuration);
+		}
+
+		if (CAN_INPUT) {
+			MainPlayer.Sprites.CurrentSprite = 0;
+			MainEnemy.Sprites.CurrentSprite = 0;		
 		}
 
 		EndDrawing();
@@ -242,7 +244,7 @@ void DrawWaitForInput(Action& PlayerAction, GameState& State, Player& MainPlayer
 		}
 	}
 	if(TIME_SINCE_LAST_INPUT > INPUT_COOLDOWN) {
-		CAN_INPUT = true;
+		CAN_INPUT = true;	
 	}
 }
 
@@ -272,10 +274,6 @@ void DrawOutcome(Player& MainPlayer, Enemy& MainEnemy, Action& PlayerAction, Gam
 		//DrawText("You have been defeated! Game Over!\n", 400, 300, 20, RED);
 		State = GAME_OVER;
 	}
-	if (State == WAITING_FOR_INPUT) {
-		MainPlayer.Sprites.CurrentSprite = 0;
-		MainEnemy.Sprites.CurrentSprite = 0;
-	}
 }
 
 void DrawLootOutcome(Enemy& MainEnemy, int& RoundNumber, Player& MainPlayer, GameState& State)
@@ -284,7 +282,7 @@ void DrawLootOutcome(Enemy& MainEnemy, int& RoundNumber, Player& MainPlayer, Gam
 	CombatLog::AddMessage(EnemyDefeatMessage, GREEN, LONG_MESSAGE_DURATION);
 	RoundNumber++;
 	FindItem(MainPlayer, MainEnemy, RoundNumber);
-	if (RoundNumber > 5) {
+	if (RoundNumber > 4) {
 		CombatLog::AddMessage("You have defeated all enemies! You win!", GREEN, LONG_MESSAGE_DURATION);
 		State = GAME_OVER;
 	}
@@ -330,11 +328,11 @@ void ProcessOutcome(Player& MainPlayer, Enemy& MainEnemy, Action PlayerAction, i
 		}} },
 		{ {ATTACK, PARRY}, {MainEnemy.GetName() + " parries your attack and ", LIGHTGRAY, [RoundNumber](Player& player , Enemy& enemy) {
 			if (CheckParrySuccess(10 - (RoundNumber + 1), enemy.GetStamina())) {
-				DrawText("counters!", 10, 320, 20, RED);
+				CombatLog::AddMessage("counters!", RED, SHORT_MESSAGE_DURATION);
 				player.UpdateHealth(-(enemy.GetAttackPower() * 2));
 			}
 			else {
-				DrawText("fails to counter!", 10, 320, 20, GREEN);
+				CombatLog::AddMessage("fails to counter!", GREEN, SHORT_MESSAGE_DURATION);
 				enemy.UpdateHealth(-(player.GetAttackPower() * 2));
 			}
 		}} },
@@ -357,11 +355,11 @@ void ProcessOutcome(Player& MainPlayer, Enemy& MainEnemy, Action PlayerAction, i
 		{ {DEFEND, DODGE}, {MainEnemy.GetName() + " misread the tell and drains stamina while you recover!", GREEN, [](Player& player , Enemy& enemy) {}} },
 		{ {PARRY, ATTACK}, {"You parry " + MainEnemy.GetName() + "'s attack and ", LIGHTGRAY, [RoundNumber](Player& player , Enemy& enemy) {
 			if (CheckParrySuccess(10 - RoundNumber, player.GetStamina())) {
-				DrawText("counter!", 10, 320, 20, GREEN);
+				CombatLog::AddMessage("counter!", GREEN, SHORT_MESSAGE_DURATION);
 				enemy.UpdateHealth(-(player.GetAttackPower() * 2));
 			}
 			else {
-				DrawText("fail to counter!", 10, 320, 20, RED);
+				CombatLog::AddMessage("fail to counter!", RED, SHORT_MESSAGE_DURATION);
 				player.UpdateHealth(-(enemy.GetAttackPower() * 2));
 			}
 		}} },
@@ -370,11 +368,11 @@ void ProcessOutcome(Player& MainPlayer, Enemy& MainEnemy, Action PlayerAction, i
 		{ {PARRY, HEAL}, {"You misread the tell and drain your stamina, " + MainEnemy.GetName() + " heals!", YELLOW, [](Player& player , Enemy& enemy) {}} },
 		{ {PARRY, HEAVY_ATTACK}, {"You parry " + MainEnemy.GetName() + "'s heavy attack and ", LIGHTGRAY, [RoundNumber](Player& player , Enemy& enemy) {
 			if (CheckParrySuccess(6 - RoundNumber, enemy.GetStamina())) {
-				DrawText("counter!", 10, 320, 20, RED);
+				CombatLog::AddMessage("counter!", RED, SHORT_MESSAGE_DURATION);
 				player.UpdateHealth(-(enemy.GetAttackPower() * 2));
 			}
 			else {
-				DrawText("fails to counter!", 10, 320, 20, GREEN);
+				CombatLog::AddMessage("fails to counter!", GREEN, SHORT_MESSAGE_DURATION);
 				enemy.UpdateHealth(-(player.GetAttackPower() * 2));
 			}
 		}} },
@@ -397,11 +395,11 @@ void ProcessOutcome(Player& MainPlayer, Enemy& MainEnemy, Action PlayerAction, i
 		}} },
 		{ {HEAVY_ATTACK, PARRY}, {MainEnemy.GetName() + " parries your heavy attack and ", LIGHTGRAY, [RoundNumber](Player& player , Enemy& enemy) {
 			if (CheckParrySuccess(6 - RoundNumber, enemy.GetStamina())) {
-				DrawText("counters!", 10, 320, 20, RED);
+				CombatLog::AddMessage("counters!", RED, SHORT_MESSAGE_DURATION);
 				player.UpdateHealth(-(enemy.GetAttackPower() * 2));
 			}
 			else {
-				DrawText("fails to counter!", 10, 320, 20, GREEN);
+				CombatLog::AddMessage("fails to counter!", GREEN, SHORT_MESSAGE_DURATION);
 				enemy.UpdateHealth(-(player.GetAttackPower() * 2));
 			}
 		}} },
